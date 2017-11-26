@@ -34,7 +34,7 @@ class Canvas(app.Canvas):
         gloo.set_state(clear_color=(0, 0, 0, 1), depth_test=False, blend=False)
         self.program = gloo.Program(VS, FS_point)
         self.program["a_position"] = surface.position()
-        self.program["a_height"] = surface.heights
+        self.program["a_height"] = surface.get_heights_in_norm_coords()
 
         self.t = 0
         self._timer = app.Timer('auto', connect=self.on_timer, start=True)
@@ -49,11 +49,11 @@ class Canvas(app.Canvas):
     def on_draw(self, event):
         gloo.clear()
         surface.next_wave_mutation()
-        self.program["a_height"] = surface.heights
+        self.program["a_height"] = surface.get_heights_in_norm_coords()
         self.program.draw('points')
 
     def on_timer(self, event):
-        self.t += 0.03
+        self.t += 0.05
         self.update()
 
     def on_resize(self, event):
@@ -63,7 +63,7 @@ class Canvas(app.Canvas):
         surface.one_random_wave()
 
 if __name__ == '__main__':
-    surface = NaturalWaves(size=(46, 46), max_height=0.1)
-    surface.generate_random_waves(intensity=30)
+    surface = NaturalWaves(size=(20, 20), max_height=0.4)
+    surface.generate_random_waves(intensity=1)
     c = Canvas(surface)
     app.run()
