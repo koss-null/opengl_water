@@ -42,6 +42,28 @@ class NaturalWaves:
             z_norm.append(zz)
         return np.array(z_norm, dtype=np.float32)
 
+    def triangulation(self):
+        a = np.indices((self.size[0] - 1, self.size[1] - 1))
+        b = a + np.array([1, 0])[:, None, None]
+        c = a + np.array([1, 1])[:, None, None]
+        d = a + np.array([0, 1])[:, None, None]
+
+        a_r = a.reshape((2, -1))
+        b_r = b.reshape((2, -1))
+        c_r = c.reshape((2, -1))
+        d_r = d.reshape((2, -1))
+
+        a_l = np.ravel_multi_index(a_r, self.size)
+        b_l = np.ravel_multi_index(b_r, self.size)
+        c_l = np.ravel_multi_index(c_r, self.size)
+        d_l = np.ravel_multi_index(d_r, self.size)
+
+        abc = np.concatenate((a_l[..., None], b_l[..., None], c_l[..., None]), axis=-1)
+        acd = np.concatenate((a_l[..., None], c_l[..., None], d_l[..., None]), axis=-1)
+
+        return np.concatenate((abc, acd), axis=0).astype(np.uint32)
+
+
     def one_random_wave(self):
         for i in range(0, 3):
             z_x_ind = random.randint(0, self.size[0] - 1)
