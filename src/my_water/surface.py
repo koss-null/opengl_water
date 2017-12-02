@@ -125,10 +125,10 @@ class NaturalWaves:
     def _count_avg_speed(self, x, y, lower_bound):
         avg_vel = 0.
         corpuscule_m = 1.
-        g_force = 0.0009 * corpuscule_m if self.heights[x][y] < lower_bound else -0.0009 * self.heights[x][y]
+        g_force = 0.0009 * corpuscule_m if self.heights[x][y] < lower_bound else -0.00009 * self.heights[x][y]
         time = 1.
 
-        n_nearest = 1
+        n_nearest = 3
         # if self.heights[x][y] == 0 and self.speed[x][y] == 0:
         #     n_nearest = 1
         for i in range(max(x-n_nearest, 0), min(x+n_nearest, self.size[0]-1) + 1):
@@ -149,21 +149,21 @@ class NaturalWaves:
 
     def _count_height(self, z_next, x, y, time):
         speed_changing = self._count_avg_speed(x, y, -0)
-        next_speed = self.speed_x[x][y] + speed_changing
+        next_speed = self.speed[x][y] + speed_changing
         self.speed_x[x][y] = next_speed
         friction_coef = 0.925
         z_next[x][y] = self.heights[x][y] * friction_coef - next_speed * time
 
-    def next_wave_mutation(self, time=0.005):
+    def next_wave_mutation(self, time=0.009):
         # counting water mass center
 
-        #z_next = np.zeros(self.size, dtype=np.float32)
+        z_next = np.zeros(self.size, dtype=np.float32)
         self.speed_x = self.speed
         for x in range(self.size[0]):
             for y in range(self.size[1]):
-                self._count_height(self.heights, x, y, time)
+                self._count_height(z_next, x, y, time)
 
-        #self.heights = z_next
+        self.heights = z_next
         self.speed = self.speed_x
         self._normalize()
 
