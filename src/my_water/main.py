@@ -45,7 +45,7 @@ class Canvas(app.Canvas):
         surface.one_random_wave()
 
 if __name__ == '__main__':
-    surface = NaturalWaves(size=(15, 15), max_height=0.6)
+    surface = NaturalWaves(size=(150, 150), max_height=0.6)
     surface.generate_random_waves(intensity=10)
     c = Canvas(surface)
     app.run()

@@ -128,11 +128,11 @@ class NaturalWaves:
         g_force = 0.0009 * corpuscule_m if self.heights[x][y] < lower_bound else -0.0009 * self.heights[x][y]
         time = 1.
 
-        n_nearest = 3
+        n_nearest = 1
         # if self.heights[x][y] == 0 and self.speed[x][y] == 0:
         #     n_nearest = 1
-        for i in range(max(x-n_nearest, 0), min(x+n_nearest, self.size[0]-1)):
-            for j in range(max(y-n_nearest, 0), min(y+n_nearest, self.size[1]-1)):
+        for i in range(max(x-n_nearest, 0), min(x+n_nearest, self.size[0]-1) + 1):
+            for j in range(max(y-n_nearest, 0), min(y+n_nearest, self.size[1]-1) + 1):
                 if i == x and j == y:
                     continue
                 avg_vel += NaturalWaves._force(self.heights[x][y], self.heights[i][j], abs(x-i), abs(y-j))
