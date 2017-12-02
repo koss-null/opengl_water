@@ -14,7 +14,7 @@ class Canvas(app.Canvas):
         self.program["a_position"] = surface.position()
         self.program["a_height"] = surface.get_heights_in_norm_coords()
 
-        self.triangles = gloo.IndexBuffer(surface.triangulation())
+        self.triangles = gloo.IndexBuffer(surface.wireframe())
 
         self.t = 0
         self._timer = app.Timer('auto', connect=self.on_timer, start=True)
@@ -32,7 +32,7 @@ class Canvas(app.Canvas):
         self.program["a_height"] = surface.get_heights_in_norm_coords()
 
         #self.program.draw('points')
-        self.program.draw('triangles', self.triangles)
+        self.program.draw('lines', self.triangles)
 
     def on_timer(self, event):
         self.t += 0.7

@@ -43,21 +43,19 @@ class NaturalWaves:
         return np.array(z_norm, dtype=np.float32)
 
     def wireframe(self):
-        left = np.indices((self.size[0] - 1, self.size[1]))
-        right = left + np.array([1, 0])[:, None, None]
-        left_r = left.reshape((2, -1))
-        right_r = right.reshape((2, -1))
-        left_l = np.ravel_multi_index(left_r, self.size)
-        right_l = np.ravel_multi_index(right_r, self.size)
-        horizontal = np.concatenate((left_l[..., None], right_l[..., None]), axis=-1)
-        bottom = np.indices((self.size[0], self.size[1] - 1))
-        top = bottom + np.array([0, 1])[:, None, None]
-        bottom_r = bottom.reshape((2, -1))
-        top_r = top.reshape((2, -1))
-        bottom_l = np.ravel_multi_index(bottom_r, self.size)
-        top_l = np.ravel_multi_index(top_r, self.size)
-        vertical = np.concatenate((bottom_l[..., None], top_l[..., None]), axis=-1)
-        return np.concatenate((horizontal, vertical), axis=0).astype(np.uint32)
+        final_lines = []
+        for row in range(0, self.size[1], 1):
+            for dot in range(0, self.size[0], 1):
+                if row + 1 == self.size[1] or dot + 1 == self.size[0]:
+                    continue
+                up_left = row * self.size[0] + dot
+                up_right = up_left + 1
+                dn_left = (row + 1) * self.size[0] + dot
+                dn_right = dn_left + 1
+                final_lines.append([up_left, up_right])
+                final_lines.append([up_left, dn_left])
+
+        return np.array(final_lines).astype(np.uint32)
 
     def triangulation(self):
         final_triangles = []
