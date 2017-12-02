@@ -42,30 +42,62 @@ class NaturalWaves:
             z_norm.append(zz)
         return np.array(z_norm, dtype=np.float32)
 
+    def wireframe(self):
+        left = np.indices((self.size[0] - 1, self.size[1]))
+        right = left + np.array([1, 0])[:, None, None]
+        left_r = left.reshape((2, -1))
+        right_r = right.reshape((2, -1))
+        left_l = np.ravel_multi_index(left_r, self.size)
+        right_l = np.ravel_multi_index(right_r, self.size)
+        horizontal = np.concatenate((left_l[..., None], right_l[..., None]), axis=-1)
+        bottom = np.indices((self.size[0], self.size[1] - 1))
+        top = bottom + np.array([0, 1])[:, None, None]
+        bottom_r = bottom.reshape((2, -1))
+        top_r = top.reshape((2, -1))
+        bottom_l = np.ravel_multi_index(bottom_r, self.size)
+        top_l = np.ravel_multi_index(top_r, self.size)
+        vertical = np.concatenate((bottom_l[..., None], top_l[..., None]), axis=-1)
+        return np.concatenate((horizontal, vertical), axis=0).astype(np.uint32)
+
     def triangulation(self):
-        a = np.indices((self.size[0] - 1, self.size[1] - 1))
-        b = a + np.array([1, 0])[:, None, None]
-        c = a + np.array([1, 1])[:, None, None]
-        d = a + np.array([0, 1])[:, None, None]
+        final_triangles = []
+        for row in range(0, self.size[1], 1):
+            for dot in range(0, self.size[0], 1):
+                if row + 1 == self.size[1] or dot + 1 == self.size[0]:
+                    continue
+                up_left = row * self.size[0] + dot
+                up_right = up_left + 1
+                dn_left = (row + 1) * self.size[0] + dot
+                dn_right = dn_left + 1
+                final_triangles.append([up_left, up_right, dn_right])
+                final_triangles.append([up_left, dn_left, dn_right])
 
-        a_r = a.reshape((2, -1))
-        b_r = b.reshape((2, -1))
-        c_r = c.reshape((2, -1))
-        d_r = d.reshape((2, -1))
+        return np.array(final_triangles).astype(np.uint32)
 
-        a_l = np.ravel_multi_index(a_r, self.size)
-        b_l = np.ravel_multi_index(b_r, self.size)
-        c_l = np.ravel_multi_index(c_r, self.size)
-        d_l = np.ravel_multi_index(d_r, self.size)
-
-        abc = np.concatenate((a_l[..., None], b_l[..., None], c_l[..., None]), axis=-1)
-        acd = np.concatenate((a_l[..., None], c_l[..., None], d_l[..., None]), axis=-1)
-
-        return np.concatenate((abc, acd), axis=0).astype(np.uint32)
+    # def triangulation(self):
+    #     a = np.indices((self.size[0] - 1, self.size[1] - 1))
+    #     b = a + np.array([1, 0])[:, None, None]
+    #     c = a + np.array([1, 1])[:, None, None]
+    #     d = a + np.array([0, 1])[:, None, None]
+    #
+    #     a_r = a.reshape((2, -1))
+    #     b_r = b.reshape((2, -1))
+    #     c_r = c.reshape((2, -1))
+    #     d_r = d.reshape((2, -1))
+    #
+    #     a_l = np.ravel_multi_index(a_r, self.size)
+    #     b_l = np.ravel_multi_index(b_r, self.size)
+    #     c_l = np.ravel_multi_index(c_r, self.size)
+    #     d_l = np.ravel_multi_index(d_r, self.size)
+    #
+    #     abc = np.concatenate((a_l[..., None], b_l[..., None], c_l[..., None]), axis=-1)
+    #     acd = np.concatenate((a_l[..., None], c_l[..., None], d_l[..., None]), axis=-1)
+    #
+    #     return np.concatenate((abc, acd), axis=0).astype(np.uint32)
 
 
     def one_random_wave(self):
-        for i in range(0, 3):
+        for i in range(0, 1):
             z_x_ind = random.randint(0, self.size[0] - 1)
             z_y_ind = random.randint(0, self.size[1] - 1)
             z_dot = float(random.randint(0, 100)) / 100.
@@ -76,9 +108,10 @@ class NaturalWaves:
     @staticmethod
     def _force(height1, height2, dif_x, dif_y):
         difference = dif_x + dif_y
-        connect_force = -0.01 * (difference**0.5) + 1
+        coeff = 1
+        connect_force = -0.005 * (difference**0.5) + 1
         sign = -1 if height2 > height1 else 1
-        return sign * abs(height1 - height2) * connect_force
+        return sign * abs(height1 - height2) * connect_force * coeff
 
     def _normalize(self):
         for i in range(0, len(self.heights)):
@@ -97,33 +130,43 @@ class NaturalWaves:
         g_force = 0.0009 * corpuscule_m if self.heights[x][y] < lower_bound else -0.0009 * self.heights[x][y]
         time = 1.
 
-        n_nearest = 2
+        n_nearest = 3
+        # if self.heights[x][y] == 0 and self.speed[x][y] == 0:
+        #     n_nearest = 1
         for i in range(max(x-n_nearest, 0), min(x+n_nearest, self.size[0]-1)):
             for j in range(max(y-n_nearest, 0), min(y+n_nearest, self.size[1]-1)):
                 if i == x and j == y:
                     continue
                 avg_vel += NaturalWaves._force(self.heights[x][y], self.heights[i][j], abs(x-i), abs(y-j))
 
+        # if self.heights[x][y] == 0 and self.speed[x][y] == 0 and avg_vel != 0:
+        #     n_nearest = 3
+        #     for i in range(max(x - n_nearest, 0), min(x + n_nearest, self.size[0] - 1)):
+        #         for j in range(max(y - n_nearest, 0), min(y + n_nearest, self.size[1] - 1)):
+        #             if i == x and j == y:
+        #                 continue
+        #             avg_vel += NaturalWaves._force(self.heights[x][y], self.heights[i][j], abs(x - i), abs(y - j))
+
         return (avg_vel + g_force) * time
 
     def _count_height(self, z_next, x, y, time):
         speed_changing = self._count_avg_speed(x, y, -0)
-        next_speed = self.speed[x][y] + speed_changing
-        self.speed[x][y] = next_speed
+        next_speed = self.speed_x[x][y] + speed_changing
+        self.speed_x[x][y] = next_speed
         friction_coef = 0.925
         z_next[x][y] = self.heights[x][y] * friction_coef - next_speed * time
 
     def next_wave_mutation(self, time=0.005):
         # counting water mass center
 
-        z_next = np.zeros(self.size, dtype=np.float32)
-        jobs = []
-        times = 0
-        for x in range(self.size[0]-1):
-            for y in range(self.size[1]-1):
-                self._count_height(z_next, x, y, time)
+        #z_next = np.zeros(self.size, dtype=np.float32)
+        self.speed_x = self.speed
+        for x in range(self.size[0]):
+            for y in range(self.size[1]):
+                self._count_height(self.heights, x, y, time)
 
-        self.heights = z_next
+        #self.heights = z_next
+        self.speed = self.speed_x
         self._normalize()
 
 
