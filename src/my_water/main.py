@@ -1,4 +1,5 @@
 from vispy import gloo, app, io
+import numpy as np
 
 from surface import *
 from shaders import *
@@ -9,12 +10,18 @@ class Canvas(app.Canvas):
 
     def __init__(self, surface):
         app.Canvas.__init__(self, size=(600, 600), title="Water surface")
-        gloo.set_state(clear_color=(0, 0, 0, 1), depth_test=False, blend=True)
+        gloo.set_state(clear_color=(0, 0, 0, 1), depth_test=True, blend=False)
         self.program = gloo.Program(VS, FS_triangle)
         self.program["a_position"] = surface.position()
         self.program["a_height"] = surface.get_heights_in_norm_coords()
 
-        self.triangles = gloo.IndexBuffer(surface.wireframe())
+        sun = np.array([1, 0, 1], dtype=np.float32)
+        sun /= np.linalg.norm(sun)
+        self.program["u_sun_direction"] = sun
+        self.program["u_sun_color"] = np.array([0.7, 0.7, 0], dtype=np.float32)
+        self.program["u_ambient_color"] = np.array([0.05, 0.0, 0.1], dtype=np.float32)
+
+        self.triangles = gloo.IndexBuffer(surface.triangulation())
 
         self.t = 0
         self._timer = app.Timer('auto', connect=self.on_timer, start=True)
@@ -30,8 +37,8 @@ class Canvas(app.Canvas):
         gloo.clear()
         surface.next_wave_mutation()
         self.program["a_height"] = surface.get_heights_in_norm_coords()
+        self.program["a_normal"] = surface.normal()
 
-        #self.program.draw('points')
         self.program.draw('lines', self.triangles)
 
     def on_timer(self, event):
@@ -45,7 +52,7 @@ class Canvas(app.Canvas):
         surface.one_random_wave()
 
 if __name__ == '__main__':
-    surface = NaturalWaves(size=(20, 20), max_height=0.6)
+    surface = NaturalWaves(size=(50, 50), max_height=0.6)
     surface.generate_random_waves(intensity=10)
     c = Canvas(surface)
     app.run()

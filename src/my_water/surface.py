@@ -70,6 +70,7 @@ class NaturalWaves:
                 final_triangles.append([up_left, up_right, dn_right])
                 final_triangles.append([up_left, dn_left, dn_right])
 
+        self.triangulation = final_triangles
         return np.array(final_triangles).astype(np.uint32)
 
     # def triangulation(self):
@@ -91,6 +92,7 @@ class NaturalWaves:
     #     abc = np.concatenate((a_l[..., None], b_l[..., None], c_l[..., None]), axis=-1)
     #     acd = np.concatenate((a_l[..., None], c_l[..., None], d_l[..., None]), axis=-1)
     #
+    #     self.triangulation = np.concatenate((abc, acd), axis=0).astype(np.uint32)
     #     return np.concatenate((abc, acd), axis=0).astype(np.uint32)
 
 
@@ -107,7 +109,7 @@ class NaturalWaves:
     def _force(height1, height2, dif_x, dif_y):
         difference = dif_x + dif_y
         coeff = 1
-        connect_force = -0.005 * (difference**0.5) + 1
+        connect_force = -0.5 * (difference**0.5) + 1.5
         sign = -1 if height2 > height1 else 1
         return sign * abs(height1 - height2) * connect_force * coeff
 
@@ -120,6 +122,35 @@ class NaturalWaves:
                 elif self.heights[i][j] > self.max_height:
                     self.heights[i][j] = self.max_height
                     self.speed[i][j] = 0.
+
+    def normal(self):
+        grad = [np.array([1., 0., 1.])] * (self.size[0]*self.size[1])
+        type = 0 # type of triangle
+        for triangle in self.triangulation:
+            if type == 0:
+                x1, y1, z1 = 0., 1., self.heights[int(triangle[0] / self.size[1])][triangle[0] % self.size[1]]
+                x2, y2, z2 = 1., 1., self.heights[int(triangle[1] / self.size[1])][triangle[1] % self.size[1]]
+                x3, y3, z3 = 1., 0., self.heights[int(triangle[2] / self.size[1])][triangle[2] % self.size[1]]
+            else:
+                x1, y1, z1 = 0., 1., self.heights[int(triangle[0] / self.size[1])][triangle[0] % self.size[1]]
+                x2, y2, z2 = 1., 0., self.heights[int(triangle[1] / self.size[1])][triangle[1] % self.size[1]]
+                x3, y3, z3 = 0., 0., self.heights[int(triangle[2] / self.size[1])][triangle[2] % self.size[1]]
+
+            # coeffs of plane equation
+            A = y1 * (z2 - z3) + y2 * (z3 - z1) + y3 * (z1 - z2)
+            B = z1 * (x2 - x3) + z2 * (x3 - x1) + z3 * (x1 - x2)
+            C = x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2)
+            D = -(x1 * (y2*z3 - y3*z2) + x2 * (y3*z1 - y1*z3) + x3 * (y1*z2 - y2*z1))
+
+            grad[triangle[0]] = np.array([A/D, B/D, C/D]) #np.cross(grad[triangle[0]], [A/D, B/D, C/D])
+            grad[triangle[1]] = np.array([A/D, B/D, C/D]) #np.cross(grad[triangle[1]], [A/D, B/D, C/D])
+            grad[triangle[2]] = np.array([A/D, B/D, C/D]) #  np.cross(grad[triangle[2]], [A/D, B/D, C/D])
+
+            type = (type + 1) % 2    # changing type into next one
+
+        print("normal is")
+        print(grad)
+        return grad
 
     # counts what speed will be 1 sec after
     def _count_avg_speed(self, x, y, lower_bound):
