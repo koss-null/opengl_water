@@ -108,7 +108,7 @@ class NaturalWaves:
     @staticmethod
     def _force(height1, height2, dif_x, dif_y):
         difference = dif_x + dif_y
-        coeff = 10
+        coeff = 20
         connect_force = -0.5 * (difference**0.5) + 1.5
         sign = -1 if height2 > height1 else 1
         return sign * abs(height1 - height2) * connect_force * coeff
@@ -124,7 +124,7 @@ class NaturalWaves:
                     self.speed[i][j] = 0.
 
     def normal(self):
-        grad = [np.array([1., 0., 1.])] * (self.size[0]*self.size[1])
+        grad = [np.array([0., 0., 0.])] * (self.size[0]*self.size[1])
         type = 0 # type of triangle
         heights = self.get_heights_in_norm_coords()
         for triangle in self.triangulation:
@@ -145,9 +145,9 @@ class NaturalWaves:
             if D == 0:
                 D = 0.01
 
-            grad[triangle[0]] = np.array([A, B, C]) # np.cross(grad[triangle[0]], [A/D, B/D, C/D])
-            grad[triangle[1]] = np.array([A, B, C]) # np.cross(grad[triangle[1]], [A/D, B/D, C/D])
-            grad[triangle[2]] = np.array([A, B, C]) # np.cross(grad[triangle[2]], [A/D, B/D, C/D])
+            grad[triangle[0]] = np.add(grad[triangle[0]], [A, B, C])
+            grad[triangle[1]] = np.add(grad[triangle[1]], [A, B, C])
+            grad[triangle[2]] = np.add(grad[triangle[2]], [A, B, C])
 
             type = (type + 1) % 2    # changing type into next one
 
@@ -160,7 +160,7 @@ class NaturalWaves:
         g_force = 0.0009 * corpuscule_m if self.heights[x][y] < lower_bound else -0.00009 * self.heights[x][y]
         time = 1.
 
-        n_nearest = 3
+        n_nearest = 1
         # if self.heights[x][y] == 0 and self.speed[x][y] == 0:
         #     n_nearest = 1
         for i in range(max(x-n_nearest, 0), min(x+n_nearest, self.size[0]-1) + 1):
@@ -183,10 +183,10 @@ class NaturalWaves:
         speed_changing = self._count_avg_speed(x, y, -0)
         next_speed = self.speed[x][y] + speed_changing
         self.speed_x[x][y] = next_speed
-        friction_coef = 0.925
+        friction_coef = 0.9925
         z_next[x][y] = self.heights[x][y] * friction_coef - next_speed * time
 
-    def next_wave_mutation(self, time=0.003):
+    def next_wave_mutation(self, time=0.0009):
         # counting water mass center
 
         z_next = np.zeros(self.size, dtype=np.float32)
