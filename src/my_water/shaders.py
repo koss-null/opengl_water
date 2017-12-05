@@ -12,7 +12,7 @@ varying vec3 v_position;
 
 void main (void) {
     vec3 v_normal = normalize(a_normal);
-    v_directed_light = max(0, dot(v_normal, u_sun_direction));
+    v_directed_light = max(0, -dot(v_normal, u_sun_direction));
     v_position = vec3(a_position.xy, a_height);
         
     gl_Position=vec4(a_position.xy/2, a_height*a_height, a_height);
@@ -31,11 +31,11 @@ varying vec3 v_position;
 
 void main() {
     vec3 eye = vec3(0,0,1);
-    vec3 to_eye=normalize((1-v_position)*0.5 - eye);
+    vec3 to_eye=normalize(v_position - eye);
     
     vec3 reflected = normalize(to_eye - 2*v_normal*dot(v_normal, to_eye) / dot(v_normal,v_normal));
     
-    float directed_light = pow(max(0, dot(u_sun_direction, reflected)), 32);
+    float directed_light = pow(max(0, -dot(u_sun_direction, reflected)), 16);
     vec3 rgb = clamp(u_sun_color*directed_light + u_ambient_color, 0.0, 1.0);
     gl_FragColor = vec4(rgb,1);
 }

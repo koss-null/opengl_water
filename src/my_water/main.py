@@ -19,7 +19,7 @@ class Canvas(app.Canvas):
         sun /= np.linalg.norm(sun)
         self.program["u_sun_direction"] = sun
         self.program["u_sun_color"] = np.array([0.7, 0.7, 0], dtype=np.float32)
-        self.program["u_ambient_color"] = np.array([0.05, 0.0, 0.1], dtype=np.float32)
+        self.program["u_ambient_color"] = np.array([0.1, 0.0, 0.5], dtype=np.float32)
 
         self.triangles = gloo.IndexBuffer(surface.triangulation())
 
@@ -39,7 +39,7 @@ class Canvas(app.Canvas):
         self.program["a_height"] = surface.get_heights_in_norm_coords()
         self.program["a_normal"] = surface.normal()
 
-        self.program.draw('triangles', self.triangles)
+        self.program.draw('lines', self.triangles)
 
     def on_timer(self, event):
         self.t += 0.7

@@ -126,15 +126,16 @@ class NaturalWaves:
     def normal(self):
         grad = [np.array([1., 0., 1.])] * (self.size[0]*self.size[1])
         type = 0 # type of triangle
+        heights = self.get_heights_in_norm_coords()
         for triangle in self.triangulation:
             if type == 0:
-                x1, y1, z1 = 0., 1., self.heights[int(triangle[0] / self.size[1])][triangle[0] % self.size[1]]
-                x2, y2, z2 = 1., 1., self.heights[int(triangle[1] / self.size[1])][triangle[1] % self.size[1]]
-                x3, y3, z3 = 1., 0., self.heights[int(triangle[2] / self.size[1])][triangle[2] % self.size[1]]
+                x1, y1, z1 = 0., 1., heights[int(triangle[0] / self.size[1])][triangle[0] % self.size[1]]
+                x2, y2, z2 = 1., 1., heights[int(triangle[1] / self.size[1])][triangle[1] % self.size[1]]
+                x3, y3, z3 = 1., 0., heights[int(triangle[2] / self.size[1])][triangle[2] % self.size[1]]
             else:
-                x1, y1, z1 = 0., 1., self.heights[int(triangle[0] / self.size[1])][triangle[0] % self.size[1]]
-                x2, y2, z2 = 1., 0., self.heights[int(triangle[1] / self.size[1])][triangle[1] % self.size[1]]
-                x3, y3, z3 = 0., 0., self.heights[int(triangle[2] / self.size[1])][triangle[2] % self.size[1]]
+                x1, y1, z1 = 0., 1., heights[int(triangle[0] / self.size[1])][triangle[0] % self.size[1]]
+                x2, y2, z2 = 1., 0., heights[int(triangle[1] / self.size[1])][triangle[1] % self.size[1]]
+                x3, y3, z3 = 0., 0., heights[int(triangle[2] / self.size[1])][triangle[2] % self.size[1]]
 
             # coeffs of plane equation
             A = y1 * (z2 - z3) + y2 * (z3 - z1) + y3 * (z1 - z2)
