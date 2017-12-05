@@ -18,8 +18,8 @@ class Canvas(app.Canvas):
         sun = np.array([1, 0, 1], dtype=np.float32)
         sun /= np.linalg.norm(sun)
         self.program["u_sun_direction"] = sun
-        self.program["u_sun_color"] = np.array([0.7, 0.7, 0], dtype=np.float32)
-        self.program["u_ambient_color"] = np.array([0.1, 0.0, 0.5], dtype=np.float32)
+        self.program["u_sun_color"] = np.array([0.7, 0.7, 0.5], dtype=np.float32)
+        self.program["u_ambient_color"] = np.array([0.05, 0.0, 0.5], dtype=np.float32)
 
         self.triangles = gloo.IndexBuffer(surface.triangulation())
 
@@ -39,7 +39,7 @@ class Canvas(app.Canvas):
         self.program["a_height"] = surface.get_heights_in_norm_coords()
         self.program["a_normal"] = surface.normal()
 
-        self.program.draw('lines', self.triangles)
+        self.program.draw('triangles', self.triangles)
 
     def on_timer(self, event):
         self.t += 0.7
@@ -52,7 +52,7 @@ class Canvas(app.Canvas):
         surface.one_random_wave()
 
 if __name__ == '__main__':
-    surface = NaturalWaves(size=(25, 25), max_height=0.99)
-    surface.generate_random_waves(intensity=10)
+    surface = NaturalWaves(size=(25, 25), max_height=0.7)
+    surface.generate_random_waves(intensity=30)
     c = Canvas(surface)
     app.run()
