@@ -8,7 +8,7 @@ import time
 
 class Canvas(app.Canvas):
 
-    def __init__(self, surface, sky="fluffy_clouds.png"):
+    def __init__(self, surface, sky="fluffy_clouds.png", bed="seabed.png"):
         app.Canvas.__init__(self, size=(600, 600), title="Water surface")
         gloo.set_state(clear_color=(0, 0, 0, 1), depth_test=True, blend=False)
         self.program = gloo.Program(VS, FS_triangle)
@@ -23,6 +23,14 @@ class Canvas(app.Canvas):
 
         self.sky = io.read_png(sky)
         self.program['u_sky_texture'] = gloo.Texture2D(self.sky, wrapping='repeat', interpolation='linear')
+        self.bed = io.read_png(bed)
+        self.program['u_bed_texture'] = gloo.Texture2D(self.bed, wrapping='repeat', interpolation='linear')
+
+        #self.program_point["u_eye_height"] = 3
+
+        self.program["u_eye_height"] = 2.5
+        self.program["u_alpha"] = 0.3
+        self.program["u_bed_depth"] = 2
 
         self.triangles = gloo.IndexBuffer(surface.triangulation())
 
@@ -55,7 +63,7 @@ class Canvas(app.Canvas):
         surface.one_random_wave()
 
 if __name__ == '__main__':
-    surface = NaturalWaves(size=(15, 15), max_height=0.1)
-    surface.generate_random_waves(intensity=300)
+    surface = NaturalWaves(size=(20, 20), max_height=0.7)
+    surface.generate_random_waves(intensity=30)
     c = Canvas(surface)
     app.run()

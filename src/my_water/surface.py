@@ -183,7 +183,7 @@ class NaturalWaves:
         speed_changing = self._count_avg_speed(x, y, -0)
         next_speed = self.speed[x][y] + speed_changing
         self.speed_x[x][y] = next_speed
-        friction_coef = 0.925
+        friction_coef = 0.9925
         z_next[x][y] = self.heights[x][y] * friction_coef - next_speed * time
 
     def next_wave_mutation(self, time=0.0009):
