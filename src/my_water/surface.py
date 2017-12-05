@@ -108,7 +108,7 @@ class NaturalWaves:
     @staticmethod
     def _force(height1, height2, dif_x, dif_y):
         difference = dif_x + dif_y
-        coeff = 1
+        coeff = 2
         connect_force = -0.5 * (difference**0.5) + 1.5
         sign = -1 if height2 > height1 else 1
         return sign * abs(height1 - height2) * connect_force * coeff
@@ -141,15 +141,15 @@ class NaturalWaves:
             B = z1 * (x2 - x3) + z2 * (x3 - x1) + z3 * (x1 - x2)
             C = x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2)
             D = -(x1 * (y2*z3 - y3*z2) + x2 * (y3*z1 - y1*z3) + x3 * (y1*z2 - y2*z1))
+            if D == 0:
+                D = 0.01
 
-            grad[triangle[0]] = np.array([A/D, B/D, C/D]) #np.cross(grad[triangle[0]], [A/D, B/D, C/D])
-            grad[triangle[1]] = np.array([A/D, B/D, C/D]) #np.cross(grad[triangle[1]], [A/D, B/D, C/D])
-            grad[triangle[2]] = np.array([A/D, B/D, C/D]) #  np.cross(grad[triangle[2]], [A/D, B/D, C/D])
+            grad[triangle[0]] = np.array([A/D, B/D, C/D]) # np.cross(grad[triangle[0]], [A/D, B/D, C/D])
+            grad[triangle[1]] = np.array([A/D, B/D, C/D]) # np.cross(grad[triangle[1]], [A/D, B/D, C/D])
+            grad[triangle[2]] = np.array([A/D, B/D, C/D]) # np.cross(grad[triangle[2]], [A/D, B/D, C/D])
 
             type = (type + 1) % 2    # changing type into next one
 
-        print("normal is")
-        print(grad)
         return grad
 
     # counts what speed will be 1 sec after
@@ -159,7 +159,7 @@ class NaturalWaves:
         g_force = 0.0009 * corpuscule_m if self.heights[x][y] < lower_bound else -0.00009 * self.heights[x][y]
         time = 1.
 
-        n_nearest = 3
+        n_nearest = 2
         # if self.heights[x][y] == 0 and self.speed[x][y] == 0:
         #     n_nearest = 1
         for i in range(max(x-n_nearest, 0), min(x+n_nearest, self.size[0]-1) + 1):

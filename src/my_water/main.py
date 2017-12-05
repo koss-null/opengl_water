@@ -39,7 +39,7 @@ class Canvas(app.Canvas):
         self.program["a_height"] = surface.get_heights_in_norm_coords()
         self.program["a_normal"] = surface.normal()
 
-        self.program.draw('lines', self.triangles)
+        self.program.draw('triangles', self.triangles)
 
     def on_timer(self, event):
         self.t += 0.7
@@ -52,7 +52,7 @@ class Canvas(app.Canvas):
         surface.one_random_wave()
 
 if __name__ == '__main__':
-    surface = NaturalWaves(size=(50, 50), max_height=0.6)
+    surface = NaturalWaves(size=(25, 25), max_height=0.99)
     surface.generate_random_waves(intensity=10)
     c = Canvas(surface)
     app.run()
