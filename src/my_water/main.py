@@ -8,7 +8,7 @@ import time
 
 class Canvas(app.Canvas):
 
-    def __init__(self, surface):
+    def __init__(self, surface, sky="fluffy_clouds.png"):
         app.Canvas.__init__(self, size=(600, 600), title="Water surface")
         gloo.set_state(clear_color=(0, 0, 0, 1), depth_test=True, blend=False)
         self.program = gloo.Program(VS, FS_triangle)
@@ -20,6 +20,9 @@ class Canvas(app.Canvas):
         self.program["u_sun_direction"] = sun
         self.program["u_sun_color"] = np.array([0.7, 0.7, 0.5], dtype=np.float32)
         self.program["u_ambient_color"] = np.array([0.05, 0.0, 0.5], dtype=np.float32)
+
+        self.sky = io.read_png(sky)
+        self.program['u_sky_texture'] = gloo.Texture2D(self.sky, wrapping='repeat', interpolation='linear')
 
         self.triangles = gloo.IndexBuffer(surface.triangulation())
 
@@ -52,7 +55,7 @@ class Canvas(app.Canvas):
         surface.one_random_wave()
 
 if __name__ == '__main__':
-    surface = NaturalWaves(size=(25, 25), max_height=0.3)
+    surface = NaturalWaves(size=(15, 15), max_height=0.1)
     surface.generate_random_waves(intensity=300)
     c = Canvas(surface)
     app.run()
