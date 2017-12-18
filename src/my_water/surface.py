@@ -73,33 +73,10 @@ class NaturalWaves:
         self.triangulation = final_triangles
         return np.array(final_triangles).astype(np.uint32)
 
-    # def triangulation(self):
-    #     a = np.indices((self.size[0] - 1, self.size[1] - 1))
-    #     b = a + np.array([1, 0])[:, None, None]
-    #     c = a + np.array([1, 1])[:, None, None]
-    #     d = a + np.array([0, 1])[:, None, None]
-    #
-    #     a_r = a.reshape((2, -1))
-    #     b_r = b.reshape((2, -1))
-    #     c_r = c.reshape((2, -1))
-    #     d_r = d.reshape((2, -1))
-    #
-    #     a_l = np.ravel_multi_index(a_r, self.size)
-    #     b_l = np.ravel_multi_index(b_r, self.size)
-    #     c_l = np.ravel_multi_index(c_r, self.size)
-    #     d_l = np.ravel_multi_index(d_r, self.size)
-    #
-    #     abc = np.concatenate((a_l[..., None], b_l[..., None], c_l[..., None]), axis=-1)
-    #     acd = np.concatenate((a_l[..., None], c_l[..., None], d_l[..., None]), axis=-1)
-    #
-    #     self.triangulation = np.concatenate((abc, acd), axis=0).astype(np.uint32)
-    #     return np.concatenate((abc, acd), axis=0).astype(np.uint32)
-
-
     def one_random_wave(self):
         for i in range(0, 1):
-            z_x_ind = random.randint(0, self.size[0] - 1)
-            z_y_ind = random.randint(0, self.size[1] - 1)
+            z_x_ind = int(self.size[0] / 2) #random.randint(0, self.size[0] - 1)
+            z_y_ind = int(self.size[1] / 2) #random.randint(0, self.size[1] - 1)
             z_dot = float(random.randint(0, 100)) / 100.
             self.heights[z_x_ind][z_y_ind] = z_dot
             print("Generated wave of position " + str(z_dot) + " with coords " + str(z_x_ind) + " " + str(z_y_ind))
@@ -108,7 +85,7 @@ class NaturalWaves:
     @staticmethod
     def _force(height1, height2, dif_x, dif_y):
         difference = dif_x + dif_y
-        coeff = 20
+        coeff = 100
         connect_force = -0.5 * (difference**0.5) + 1.5
         sign = -1 if height2 > height1 else 1
         return sign * abs(height1 - height2) * connect_force * coeff
@@ -122,6 +99,12 @@ class NaturalWaves:
                 elif self.heights[i][j] > self.max_height:
                     self.heights[i][j] = self.max_height
                     self.speed[i][j] = 0.
+
+    def _vec_norm(self, coords):
+        abs = math.sqrt(coords[0]**2 + coords[1] **2 + coords[2]**2)
+        if abs == 0:
+            return np.array([0, 0, 0])
+        return np.array([coords[0] / abs, coords[2] / abs, coords[2] / abs])
 
     def normal(self):
         grad = [np.array([0., 0., 0.])] * (self.size[0]*self.size[1])
@@ -142,12 +125,10 @@ class NaturalWaves:
             B = z1 * (x2 - x3) + z2 * (x3 - x1) + z3 * (x1 - x2)
             C = x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2)
             D = -(x1 * (y2*z3 - y3*z2) + x2 * (y3*z1 - y1*z3) + x3 * (y1*z2 - y2*z1))
-            if D == 0:
-                D = 0.01
 
-            grad[triangle[0]] = np.add(grad[triangle[0]], [A, B, C])
-            grad[triangle[1]] = np.add(grad[triangle[1]], [A, B, C])
-            grad[triangle[2]] = np.add(grad[triangle[2]], [A, B, C])
+            grad[triangle[0]] = self._vec_norm(np.add(grad[triangle[0]], [A, B, C]))
+            grad[triangle[1]] = self._vec_norm(np.add(grad[triangle[1]], [A, B, C]))
+            grad[triangle[2]] = self._vec_norm(np.add(grad[triangle[2]], [A, B, C]))
 
             type = (type + 1) % 2    # changing type into next one
 
