@@ -126,9 +126,9 @@ class NaturalWaves:
             C = x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2)
             D = -(x1 * (y2*z3 - y3*z2) + x2 * (y3*z1 - y1*z3) + x3 * (y1*z2 - y2*z1))
 
-            grad[triangle[0]] = self._vec_norm(np.add(grad[triangle[0]], [A, B, C]))
-            grad[triangle[1]] = self._vec_norm(np.add(grad[triangle[1]], [A, B, C]))
-            grad[triangle[2]] = self._vec_norm(np.add(grad[triangle[2]], [A, B, C]))
+            grad[triangle[0]] = np.add(grad[triangle[0]], self._vec_norm([A, B, C]))
+            grad[triangle[1]] = np.add(grad[triangle[1]], self._vec_norm([A, B, C]))
+            grad[triangle[2]] = np.add(grad[triangle[2]], self._vec_norm([A, B, C]))
 
             type = (type + 1) % 2    # changing type into next one
 

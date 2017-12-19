@@ -212,7 +212,7 @@ class Canvas(app.Canvas):
             print("Show sun diffused light:", self.diffused_flag)
             self.apply_flags()
         elif event.key == '2':
-            self.bed_flag = not self.bed_flag;
+            self.bed_flag = not self.bed_flag
             print("Show refracted image of seabed:", self.bed_flag)
             self.apply_flags()
         elif event.key == '3':
