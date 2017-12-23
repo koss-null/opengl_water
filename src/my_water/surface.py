@@ -75,8 +75,8 @@ class NaturalWaves:
 
     def one_random_wave(self):
         for i in range(0, 1):
-            z_x_ind = int(self.size[0] / 2) #random.randint(0, self.size[0] - 1)
-            z_y_ind = int(self.size[1] / 2) #random.randint(0, self.size[1] - 1)
+            z_x_ind = random.randint(0, self.size[0] - 1)
+            z_y_ind = random.randint(0, self.size[1] - 1)
             z_dot = float(random.randint(0, 100)) / 100.
             self.heights[z_x_ind][z_y_ind] = z_dot
             print("Generated wave of position " + str(z_dot) + " with coords " + str(z_x_ind) + " " + str(z_y_ind))
@@ -167,7 +167,7 @@ class NaturalWaves:
         friction_coef = 0.9925
         z_next[x][y] = self.heights[x][y] * friction_coef - next_speed * time
 
-    def next_wave_mutation(self, time=0.0009):
+    def next_wave_mutation(self, time=0.0001):
         # counting water mass center
 
         z_next = np.zeros(self.size, dtype=np.float32)

@@ -17,6 +17,10 @@ void main (void) {
     v_position = vec3(a_position.xy, a_height);
     vec3 eye = vec3(u_eye_position.xy, u_eye_height);
 
+    float cos_phi = dot(v_normal, -eye) /
+                        sqrt(pow(v_normal.x, 2) + pow(v_normal.y, 2) + pow(v_normal.z, 2)) /
+                        sqrt(pow(eye.x, 2) + pow(eye.y, 2) + pow(eye.z, 2));
+
     float z = (1-(1+a_height)/(1+u_eye_height)) * cos_phi;
 
     gl_Position = vec4(a_position.xy/2, a_height*z, z);

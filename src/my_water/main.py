@@ -42,7 +42,6 @@ class Canvas(app.Canvas):
 
         self.camera = np.array([0, 0, 1])
         self.up = np.array([0, 1, 0])
-        self.set_camera()
 
         self.t = 0
         self._timer = app.Timer('auto', connect=self.on_timer, start=True)
@@ -96,23 +95,6 @@ class Canvas(app.Canvas):
             self.eye_position = [0, 0]
             self.program["u_eye_position"] = self.eye_position
 
-    def set_camera(self):
-        rotation = np.zeros((4, 4), dtype=np.float32)
-        rotation[3, 3] = 1
-        rotation[0, :3] = np.cross(self.up, self.camera)
-        rotation[1, :3] = self.up
-        rotation[2, :3] = self.camera
-        world_view = rotation
-        self.program['u_world_view'] = world_view.T
-        self.program_point['u_world_view'] = world_view.T
-
-    def rotate_camera(self, shift):
-        right = np.cross(self.up, self.camera)
-        new_camera = self.camera - right * shift[0] + self.up * shift[1]
-        new_up = self.up - self.camera * shift[0]
-        self.camera = normalize(new_camera)
-        self.up = normalize(new_up)
-        self.up = np.cross(self.camera, np.cross(self.up, self.camera))
 
     def screen_to_gl_coordinates(self, pos):
         return 2 * np.array(pos) / np.array(self.size) - 1
@@ -121,19 +103,20 @@ class Canvas(app.Canvas):
         self.drag_start = self.screen_to_gl_coordinates(event.pos)
 
     def on_mouse_move(self, event):
-        if not self.drag_start is None:
-            pos = self.screen_to_gl_coordinates(event.pos)
-            self.rotate_camera(pos - self.drag_start)
-            self.drag_start = pos
-            self.set_camera()
-            self.update()
+        lol = 1
+        # if not self.drag_start is None:
+        #     pos = self.screen_to_gl_coordinates(event.pos)
+        #     self.rotate_camera(pos - self.drag_start)
+        #     self.drag_start = pos
+        #     self.set_camera()
+        #     self.update()
 
     def on_mouse_release(self, event):
         self.drag_start = None
 
 
 if __name__ == '__main__':
-    surface = NaturalWaves(size=(20, 20), max_height=0.9)
+    surface = NaturalWaves(size=(10, 10), max_height=0.9)
     surface.generate_random_waves(intensity=0)
     c = Canvas(surface)
     app.run()
