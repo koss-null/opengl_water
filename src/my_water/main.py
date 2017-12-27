@@ -11,34 +11,45 @@ def normalize(vec):
 
 class Canvas(app.Canvas):
 
-    def __init__(self, surface, sky="fluffy_clouds.png", bed="seabed.png", shademap="shademap.png"):
+    def _vec_norm(self, coords):
+        abs = math.sqrt(coords[0]**2 + coords[1]**2 + coords[2]**2)
+        if abs == 0:
+            return np.array([0, 0, 0])
+        return np.array([coords[0] / abs, coords[2] / abs, coords[2] / abs])
+
+    def __init__(self, surface, sky="fluffy_clouds.png", bed="seabed.png", shademap_name="shademap.png"):
         app.Canvas.__init__(self, size=(600, 600), title="Water surface")
         gloo.set_state(clear_color=(0, 0, 0, 1), depth_test=True, blend=False)
         self.program = gloo.Program(VS, FS_triangle)
         self.program["a_position"] = surface.position()
         self.program["a_height"] = surface.get_heights_in_norm_coords()
 
-        sun = np.array([0.7, 0.5, 0.7], dtype=np.float32)
+        sun = np.array([0.5, 0.7, 0.3], dtype=np.float32)
         sun /= np.linalg.norm(sun)
         self.program["u_sun_direction"] = sun
-        self.program["u_sun_color"] = np.array([0.7, 0.7, 0.6], dtype=np.float32)
-        self.program["u_ambient_color"] = np.array([0.05, 0.5, 0.5], dtype=np.float32)
+        self.program["u_sun_color"] = np.array([0.3, 0.3, 0.27], dtype=np.float32)
+        self.program["u_ambient_color"] = np.array([0.1, 0.34, 0.4], dtype=np.float32)
 
         self.sky = io.read_png(sky)
         self.program['u_sky_texture'] = gloo.Texture2D(self.sky, wrapping='repeat', interpolation='linear')
         self.bed = io.read_png(bed)
         self.program['u_bed_texture'] = gloo.Texture2D(self.bed, wrapping='repeat', interpolation='linear')
-        self.shademap = io.read_png(shademap)
-        self.program['u_shademap_texture'] = gloo.Texture2D(self.shademap, interpolation='nearest')
+        self.shademap = io.read_png(shademap_name)
+        self.program['u_shademap_texture'] = gloo.Texture2D(self.shademap, interpolation='linear')
 
         self.eye_height = 2.5
-        self.eye_position = [0, 0]
+        self.eye_position = np.array([0., 0.])
         self.program["u_eye_height"] = self.eye_height
         self.program["u_eye_position"] = self.eye_position
         self.program["u_alpha"] = 0.3
         self.program["u_bed_depth"] = 1
 
+        self.program["u_main_x"] = np.array([1, 0, 0])
+        self.program["u_main_y"] = np.array([0, 1, 0])
+        self.program["u_main_z"] = np.array([0, 0, 1])
+
         self.triangles = gloo.IndexBuffer(surface.triangulation())
+        self.normal = surface.normal()
 
         self.camera = np.array([0, 0, 1])
         self.up = np.array([0, 1, 0])
@@ -57,7 +68,8 @@ class Canvas(app.Canvas):
         gloo.clear()
         surface.next_wave_mutation()
         self.program["a_height"] = surface.get_heights_in_norm_coords()
-        self.program["a_normal"] = surface.normal()
+        self.normal = surface.normal()
+        self.program["a_normal"] = self.normal
 
         self.program.draw('triangles', self.triangles)
 
@@ -80,17 +92,13 @@ class Canvas(app.Canvas):
             self.eye_height -= 0.1
             self.program["u_eye_height"] = self.eye_height
         elif event.key == 'w':
-            self.eye_position = [self.eye_position[0], self.eye_position[1] + 0.1]
-            self.program["u_eye_position"] = self.eye_position
+            event.key = 'd'
         elif event.key == 's':
-            self.eye_position = [self.eye_position[0], self.eye_position[1] - 0.1]
-            self.program["u_eye_position"] = self.eye_position
+            event.key = 'd'
         elif event.key == 'a':
-            self.eye_position = [self.eye_position[0] + 0.1, self.eye_position[1]]
-            self.program["u_eye_position"] = self.eye_position
+            event.key = 'd'
         elif event.key == 'd':
-            self.eye_position = [self.eye_position[0] - 0.1, self.eye_position[1]]
-            self.program["u_eye_position"] = self.eye_position
+            event.key = 'd'
         elif event.key == '0':
             self.eye_position = [0, 0]
             self.program["u_eye_position"] = self.eye_position
@@ -116,7 +124,8 @@ class Canvas(app.Canvas):
 
 
 if __name__ == '__main__':
-    surface = NaturalWaves(size=(10, 10), max_height=0.9)
+    surface = NaturalWaves(size=(30, 30), max_height=0.7)
+    # surface = GeomethricFigure(size=(50, 50), max_height=1)
     surface.generate_random_waves(intensity=0)
     c = Canvas(surface)
     app.run()
