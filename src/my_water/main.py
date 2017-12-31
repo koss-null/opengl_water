@@ -24,11 +24,11 @@ class Canvas(app.Canvas):
         self.program["a_position"] = surface.position()
         self.program["a_height"] = surface.get_heights_in_norm_coords()
 
-        sun = np.array([0.5, 0.7, 0.3], dtype=np.float32)
+        sun = np.array([0, 0.5, 1], dtype=np.float32)
         sun /= np.linalg.norm(sun)
         self.program["u_sun_direction"] = sun
         self.program["u_sun_color"] = np.array([0.3, 0.3, 0.27], dtype=np.float32)
-        self.program["u_ambient_color"] = np.array([0.1, 0.34, 0.4], dtype=np.float32)
+        self.program["u_ambient_color"] = np.array([0.14, 0.14, 0.2], dtype=np.float32)
 
         self.sky = io.read_png(sky)
         self.program['u_sky_texture'] = gloo.Texture2D(self.sky, wrapping='repeat', interpolation='linear')
@@ -42,11 +42,19 @@ class Canvas(app.Canvas):
         self.program["u_eye_height"] = self.eye_height
         self.program["u_eye_position"] = self.eye_position
         self.program["u_alpha"] = 0.3
-        self.program["u_bed_depth"] = 1
+
+        self.program["a_bed_depth"] = surface.get_bed_depth()
 
         self.program["u_main_x"] = np.array([1, 0, 0])
         self.program["u_main_y"] = np.array([0, 1, 0])
         self.program["u_main_z"] = np.array([0, 0, 1])
+
+        self.show_bed = 0
+        self.program["u_show_bed"] = self.show_bed
+        self.show_sky = 0
+        self.program["u_show_sky"] = self.show_sky
+
+        self.program["test"] = 0.
 
         self.triangles = gloo.IndexBuffer(surface.triangulation())
         self.normal = surface.normal()
@@ -102,6 +110,16 @@ class Canvas(app.Canvas):
         elif event.key == '0':
             self.eye_position = [0, 0]
             self.program["u_eye_position"] = self.eye_position
+        elif event.key == 'b':
+            self.show_bed = (self.show_bed + 1) % 2
+            self.program["u_show_bed"] = self.show_bed
+        elif event.key == 'k':
+            self.show_sky = (self.show_sky + 1) % 2
+            self.program["u_show_sky"] = self.show_sky
+        elif event.key == 't':
+            self.program["test"] = 1.
+        elif event.key == 'r' :
+            self.program["test"] = 0.
 
 
     def screen_to_gl_coordinates(self, pos):
@@ -124,7 +142,7 @@ class Canvas(app.Canvas):
 
 
 if __name__ == '__main__':
-    surface = NaturalWaves(size=(30, 30), max_height=0.7)
+    surface = NaturalWaves(size=(20, 20), max_height=0.7)
     # surface = GeomethricFigure(size=(50, 50), max_height=1)
     surface.generate_random_waves(intensity=0)
     c = Canvas(surface)

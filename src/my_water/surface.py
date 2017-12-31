@@ -111,6 +111,15 @@ class GeomethricFigure:
         self.grad = grad
         return grad
 
+    def get_bed_depth(self):
+        z = np.zeros(self.size, dtype=np.float32)
+
+        for y in range(0, self.size[0]):
+            for x in range(0, self.size[1]):
+                z[x][y] = -1
+
+        return z
+
     def next_wave_mutation(self, time=0.0005):
         self._normalize()
 
@@ -293,6 +302,32 @@ class NaturalWaves():
         self.speed = self.speed_x
         self._normalize()
 
+    def get_bed_depth(self):
+        z = np.zeros(self.size, dtype=np.float32)
+
+        for y in range(0, self.size[0]):
+            for x in range(0, self.size[1]):
+                z[x][y] = (x - self.size[1]/2) ** 2 + (y - self.size[0]/2) ** 2
+
+        #normalization
+        max_val = -10000.
+        for i in range(0, len(z)):
+            for j in range(0, len(z[i])):
+                if z[i][j] > max_val:
+                    max_val = z[i][j]
+
+        for i in range(0, len(z)):
+            for j in range(0, len(z[i])):
+                z[i][j] /= abs(max_val)
+
+        # getting GLSL coords
+        z_norm = z
+        i = 0
+        for j in z:
+            zz = 1 - (1 + j) * 0.5
+            z_norm[i] = zz
+            i += 1
+        return z_norm
 
 class Surface():
     pass
