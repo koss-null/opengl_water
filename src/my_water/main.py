@@ -19,16 +19,16 @@ class Canvas(app.Canvas):
 
     def __init__(self, surface, sky="fluffy_clouds.png", bed="seabed.png", shademap_name="shademap.png"):
         app.Canvas.__init__(self, size=(600, 600), title="Water surface")
-        gloo.set_state(clear_color=(0, 0, 0, 1), depth_test=True, blend=False)
+        gloo.set_state(clear_color=(0, 0, 0, 1), depth_test=True, blend=True)
         self.program = gloo.Program(VS, FS_triangle)
         self.program["a_position"] = surface.position()
         self.program["a_height"] = surface.get_heights_in_norm_coords()
 
-        sun = np.array([0, 0.5, 1], dtype=np.float32)
+        sun = np.array([0., 0.5, 1], dtype=np.float32)
         sun /= np.linalg.norm(sun)
         self.program["u_sun_direction"] = sun
-        self.program["u_sun_color"] = np.array([0.3, 0.3, 0.27], dtype=np.float32)
-        self.program["u_ambient_color"] = np.array([0.14, 0.14, 0.2], dtype=np.float32)
+        self.program["u_sun_color"] = np.array([1, 0.8, 0.6], dtype=np.float32)
+        self.program["u_ambient_color"] = np.array([0.4, 0.4, 0.4], dtype=np.float32)
 
         self.sky = io.read_png(sky)
         self.program['u_sky_texture'] = gloo.Texture2D(self.sky, wrapping='repeat', interpolation='linear')
@@ -37,17 +37,16 @@ class Canvas(app.Canvas):
         self.shademap = io.read_png(shademap_name)
         self.program['u_shademap_texture'] = gloo.Texture2D(self.shademap, interpolation='linear')
 
-        self.eye_height = 2.5
+        self.eye_height = 4.5
         self.eye_position = np.array([0., 0.])
         self.program["u_eye_height"] = self.eye_height
         self.program["u_eye_position"] = self.eye_position
-        self.program["u_alpha"] = 0.3
+        self.program["u_alpha"] = 0.4
 
         self.program["a_bed_depth"] = surface.get_bed_depth()
 
-        self.program["u_main_x"] = np.array([1, 0, 0])
-        self.program["u_main_y"] = np.array([0, 1, 0])
-        self.program["u_main_z"] = np.array([0, 0, 1])
+        self.angle_x, self.angle_y, self.angle_z = 0, 0, 0
+        self.program["angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
 
         self.show_bed = 0
         self.program["u_show_bed"] = self.show_bed
@@ -100,16 +99,28 @@ class Canvas(app.Canvas):
             self.eye_height -= 0.1
             self.program["u_eye_height"] = self.eye_height
         elif event.key == 'w':
-            event.key = 'd'
+            self.angle_x += 0.1
+            self.program["angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
         elif event.key == 's':
-            event.key = 'd'
+            self.angle_x -= 0.1
+            self.program["angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
         elif event.key == 'a':
-            event.key = 'd'
+            self.angle_y -= 0.1
+            self.program["angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
         elif event.key == 'd':
-            event.key = 'd'
+            self.angle_y += 0.1
+            self.program["angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
+        elif event.key == 'z':
+            self.angle_z += 0.1
+            self.program["angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
+        elif event.key == 'x':
+            self.angle_z -= 0.1
+            self.program["angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
         elif event.key == '0':
-            self.eye_position = [0, 0]
-            self.program["u_eye_position"] = self.eye_position
+            self.eye_height = 3
+            self.program["u_eye_height"] = self.eye_height
+            self.angle_x, self.angle_y, self.angle_z = 0., 0., 0.
+            self.program["angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
         elif event.key == 'b':
             self.show_bed = (self.show_bed + 1) % 2
             self.program["u_show_bed"] = self.show_bed
@@ -118,7 +129,7 @@ class Canvas(app.Canvas):
             self.program["u_show_sky"] = self.show_sky
         elif event.key == 't':
             self.program["test"] = 1.
-        elif event.key == 'r' :
+        elif event.key == 'r':
             self.program["test"] = 0.
 
 
@@ -142,7 +153,8 @@ class Canvas(app.Canvas):
 
 
 if __name__ == '__main__':
-    surface = NaturalWaves(size=(20, 20), max_height=0.7)
+    surface = NaturalWaves(size=(20, 20), max_height=0.9)
+    # surface = RungeWaves(size=(25, 25), max_height=0.65)
     # surface = GeomethricFigure(size=(50, 50), max_height=1)
     surface.generate_random_waves(intensity=0)
     c = Canvas(surface)
