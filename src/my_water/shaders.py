@@ -118,7 +118,7 @@ void main() {
     vec2 bed_texcoord = point_on_bed.xy + vec2(0.5,0.5);
 
     float diw = length(point_on_bed - position);
-    vec3 filter = vec3(1, 0.5, 0.2);
+    vec3 filter = vec3(1, 0.5, 0.3);
     vec3 v_mask = vec3(exp(-diw * filter.x), exp(-diw * filter.y), exp(-diw * filter.z));
 
     vec3 bed_color = texture2D(u_bed_texture, bed_texcoord).rgb * v_mask; //vec3(0.1, 0.3, 0.7);
@@ -133,15 +133,28 @@ void main() {
     vec3 k_spec = u_sun_color;
     vec3 k_def = vec3(1, 0.8, 1);
     
-    float reflectance_s = pow((u_alpha*c1-c2)/(u_alpha*c1+c2), 2);
-    float reflectance_p = pow((u_alpha*c2-c1)/(u_alpha*c2+c1), 2);
+    float reflectance_s = pow((u_alpha*c1-c2)/(u_alpha*c1+c2), 3);
+    float reflectance_p = pow((u_alpha*c2-c1)/(u_alpha*c2+c1), 3);
     float reflectance = (reflectance_s + reflectance_p) / 2;
     
+    float reflected_intensity = pow(cos_phi, 1) ;
+    
+    float sky_coef = 0.6;
+    float bed_coef = 1;
+    
+    if (cos_phi > 0) {
+        vec3 cash = sky_color;
+        sky_color = bed_color;
+        bed_color = cash;
+        sky_coef = 1;
+        bed_coef = 0.6;
+    }    
+    
     if (u_show_sky == 0) {
-        k_def = k_def + sky_color * reflectance;
+        k_def = k_def + sky_color * (1 - reflected_intensity) * sky_coef;
     }
     if (u_show_bed == 0) {
-            k_def = k_def + bed_color * (1 - reflectance);
+        k_def = k_def + bed_color * (reflected_intensity) * bed_coef;
     }
     
     vec3 image_clr = k_amb + k_def * dot(v_normal, u_sun_direction) + k_spec * dot(v_normal, from_eye);

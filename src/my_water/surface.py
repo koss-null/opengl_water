@@ -130,7 +130,7 @@ class NaturalWaves():
         self.max_height = max_height
         self.speed = np.zeros(self.size, dtype=np.float32)
         self.heights = np.zeros(self.size, dtype=np.float32)
-        self.pool = multiprocessing.Pool(processes=4)
+        self.normals = np.zeros(self.size, dtype=np.float32)
 
     def position(self):
         xy = np.empty(self.size + (2,), dtype=np.float32)
@@ -248,12 +248,13 @@ class NaturalWaves():
 
             type = (type + 1) % 2    # changing type into next one
 
+        self.normals = grad
         return grad
 
     @staticmethod
     def _force(height1, height2, dif_x, dif_y):
         difference = dif_x + dif_y
-        coeff = 150
+        coeff = 200
         connect_force = -0.5 * (difference**0.5) + 1.5
         sign = -1 if height2 > height1 else 1
         return sign * abs(height1 - height2) * connect_force * coeff
@@ -336,8 +337,9 @@ class RungeWaves():
     def __init__(self, size=(10, 10), max_height=0.6):
         self.size = size
         self.max_height = max_height
-        self.speed = np.zeros(self.size, dtype=np.float32)
         self.heights = np.zeros(self.size, dtype=np.float32)
+        self.speed = np.zeros(self.size, dtype=np.float32)
+        self.speed_last = np.zeros(self.size, dtype=np.float32)
 
     def position(self):
         xy = np.empty(self.size + (2,), dtype=np.float32)
@@ -360,10 +362,10 @@ class RungeWaves():
 
     def one_random_wave(self):
         for i in range(0, 1):
-            z_x_ind = self.size[0] / 2 #random.randint(0, self.size[0] - 1)
-            z_y_ind = self.size[1] / 2 #random.randint(0, self.size[1] - 1)
-            x_ind_start, x_ind_end = z_x_ind - 5, z_x_ind + 5
-            y_ind_start, y_ind_end = z_y_ind - 5, z_y_ind + 5
+            z_x_ind = random.randint(0, self.size[0] - 1) #self.size[0] / 2
+            z_y_ind = random.randint(0, self.size[1] - 1) #self.size[1] / 2
+            x_ind_start, x_ind_end = z_x_ind - 0, z_x_ind + 1
+            y_ind_start, y_ind_end = z_y_ind - 0, z_y_ind + 1
             z_dot = float(random.randint(0, 100)) / 100.
             for x in range(x_ind_start, x_ind_end):
                 for y in range(y_ind_start, y_ind_end):
@@ -418,10 +420,8 @@ class RungeWaves():
             for j in range(0, len(self.heights[i])):
                 if self.heights[i][j] < -1:
                     self.heights[i][j] = -1
-                    self.speed[i][j] = 0.
                 elif self.heights[i][j] > self.max_height:
                     self.heights[i][j] = self.max_height
-                    self.speed[i][j] = 0.
 
     def _vec_norm(self, coords):
         abs = math.sqrt(coords[0]**2 + coords[1] **2 + coords[2]**2)
@@ -457,17 +457,64 @@ class RungeWaves():
 
         return grad
 
-    def next_wave_mutation(self, time=0.0005):
+    #####################################
+    #####################################
+    #####################################
+    #####################################
+
+    def _count_height_dummy(self, z_next, x, y, time):
+        xp = self.heights[x+1][y] if x+1 < self.size[0] else 0
+        xm = self.heights[x-1][y] if x > 0 else 0
+        yp = self.heights[x][y+1] if y+1 < self.size[1] else 0
+        ym = self.heights[x][y-1] if y > 0 else 0
+        a = self.speed[x][y] ** 2 + (self.size[0]**2) * (xp + xm + yp + ym - 4 * self.heights[x][y])
+
+        self.speed[x][y] += a * time
+        z_next[x][y] = self.heights[x][y] + self.speed[x][y] * time + (a * time**2) / 2
+
+    def _runge_func(self, x, y, time):
+        v_cur = self.speed[int(x)][int(y)]
+        v_last = self.speed_last[int(x)][int(y)]
+
+        if int(x) != x:
+            v_cur = (self.speed[int(x)][y] + self.speed[int(x) + 1][y]) / 2
+            v_last = (self.speed_last[int(x)][y] + self.speed_last[int(x) + 1][y]) / 2
+        elif int(y) != y:
+            v_cur = (self.speed[x][int(y)] + self.speed[x][int(y) + 1]) / 2
+            v_last = (self.speed_last[x][int(y)] + self.speed_last[x][int(y) + 1]) / 2
+        return float(v_cur - v_last)/time
+
+    def _count_height_runge(self, z_next, x, y, time):
+        step = float(1/self.size[0])
+
+        kx1 = self.speed[x][y] ** 2 * self._runge_func(x, y, time)
+        kx2 = self.speed[x][y] ** 2 * self._runge_func(float(x) + step/2, float(y) + step/2 * kx1, time)
+        kx3 = self.speed[x][y] ** 2 * self._runge_func(float(x) + step/2, float(y) + step/2 * kx2, time)
+        kx4 = self.speed[x][y] ** 2 * self._runge_func(float(x) + step, float(y) + step * kx3, time)
+        Lx = self.speed[x][y] + 6/self.size[0] * (kx1 + 2*kx2 + 2*kx3 + kx4)
+
+        ky1 = self.speed[x][y] ** 2 * self._runge_func(x, y, time)
+        ky2 = self.speed[x][y] ** 2 * self._runge_func(float(x) + step / 2, float(y) + step / 2 * ky1, time)
+        ky3 = self.speed[x][y] ** 2 * self._runge_func(float(x) + step / 2, float(y) + step / 2 * ky2, time)
+        ky4 = self.speed[x][y] ** 2 * self._runge_func(float(x) + step, float(y) + step * ky3, time)
+        Ly = self.speed[x][y] + 6 / self.size[0] * (ky1 + 2 * ky2 + 2 * ky3 + ky4)
+
+        dv = Lx + Ly
+        self.speed_last[x][y] = self.speed[x][y]
+        self.speed[x][y] += dv
+        z_next[x][y] += self.heights[x][y] + self.speed[x][y] * time
+
+
+    def next_wave_mutation(self, time=0.009):
         # counting water mass center
 
         z_next = np.zeros(self.size, dtype=np.float32)
-        self.speed_x = self.speed
         for x in range(self.size[0]):
             for y in range(self.size[1]):
-                self._count_height(z_next, x, y, time)
+                self._count_height_dummy(z_next, x, y, time)
+                # self._count_height_runge(z_next, x, y, time)
 
         self.heights = z_next
-        self.speed = self.speed_x
         self._normalize()
 
     def get_bed_depth(self):
