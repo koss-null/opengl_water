@@ -28,6 +28,7 @@ class Canvas(app.Canvas):
         height_texture = surface.get_heights_in_norm_coords()
         self.program["u_height"] = gloo.Texture2D(height_texture, wrapping='repeat',
                                                   interpolation='linear')
+        self.program["a_dot"] = surface.dot_types
 
         sun = np.array([0., 0.5, 1], dtype=np.float32)
         self.sun = sun / np.linalg.norm(sun)
@@ -162,6 +163,6 @@ if __name__ == '__main__':
     surface = NaturalWaves(size=(20, 20), max_height=0.9)
     # surface = RungeWaves(size=(30, 30), max_height=0.9)
     # surface = GeomethricFigure(size=(50, 50), max_height=1)
-    surface.generate_random_waves(intensity=10)
+    surface.generate_random_waves(intensity=0)
     c = Canvas(surface)
     app.run()

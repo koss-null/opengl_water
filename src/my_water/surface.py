@@ -13,6 +13,7 @@ class GeomethricFigure:
         self.grad = None
         self.max_height = max_height
         self.heights = np.zeros(self.size, dtype=np.float32)
+        self.dot_types = np.zeros(self.size[0] * self.size[1], dtype=np.float32)
 
     def position(self):
         xy = np.empty(self.size + (2,), dtype=np.float32)
@@ -131,6 +132,7 @@ class NaturalWaves():
         self.speed = np.zeros(self.size, dtype=np.float32)
         self.heights = np.zeros(self.size, dtype=np.float32)
         self.normals = np.zeros(self.size, dtype=np.float32)
+        self.dot_types = np.zeros(self.size[0] * self.size[1], dtype=np.float32)
 
     def position(self):
         xy = np.empty(self.size + (2,), dtype=np.float32)
@@ -165,15 +167,22 @@ class NaturalWaves():
                     self.heights[x][y] = z_dot * connect_force
             print("Generated wave of position " + str(z_dot) + " with coords " + str(z_x_ind) + " " + str(z_y_ind))
 
-    # turns -1;1 coords into 0;1
+    # turns -1;1 coords into 0;100
     def get_heights_in_norm_coords(self):
         z_norm = [[]] * len(self.heights)
         i = 0
         for z in self.heights:
             zz = (1 - (1 + z) * 0.5) * 100
             rgb = []
+            j = 0
             for item in zz:
-                rgb.append([int(item), 100, 100])
+                if (j % 2 == 0):
+                    self.dot_types[i * len(self.heights) + j] = 1
+                    rgb.append([int(item), int(zz[min(j + 1, len(zz)-1)]), int(self.heights[min(i + 1, len(self.heights)-1)][j])])
+                else:
+                    self.dot_types[i * len(self.heights) + j] = 2
+                    rgb.append([int(zz[max(j - 1, 0)]), int(item), int(self.heights[min(i + 1, len(self.heights)-1)][max(j-1, 0)])])
+                j += 1
             z_norm[i] = np.array(rgb, dtype=np.uint8)
             i += 1
         return np.array(z_norm, dtype=np.uint8)

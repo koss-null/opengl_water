@@ -11,14 +11,13 @@ uniform sampler2D u_height;
 
 attribute vec2  a_position;
 attribute float a_bed_depth;
+attribute float a_dot;
 
 varying float v_bed_depth;
 varying vec3  v_normal;
 varying vec3  v_position;
 varying vec3  eye_position;
 varying mat3  v_mat;
-
-varying vec3 v_h;
 
 mat3 get_matrix() {
     mat3 mat;
@@ -46,36 +45,18 @@ mat3 get_matrix() {
 }
 
 vec3 get_normal(vec2 position) {
-    float h1, h2, h3;
+    vec3 heights;
     float dev = 100;
     
-    int is_first = int(floor(position.x * u_surf_size.x));
-    float step =  2/u_surf_size.x;
-    
-    if (mod(is_first, 2.0) < 0.5) { //is_first % 2 == 0
-        h1 = texture2D(u_height, vec2(position.x, position.y)).rgb.x;
-        h2 = texture2D(u_height, vec2(position.x + step, position.y)).rgb.x;
-        h3 = texture2D(u_height, vec2(position.x, position.y + step)).rgb.x;
-    } else {
-        h1 = texture2D(u_height, vec2(position.x - step, position.y)).rgb.x;
-        h2 = texture2D(u_height, vec2(position.x, position.y)).rgb.x;
-        h3 = texture2D(u_height, vec2(position.x, position.y + step)).rgb.x;
-    }
-    
-    h1 /= dev; h2 /= dev; h3 /= dev;
-    
-    float z1 = h1;
-    float z2 = h2;
-    float z3 = h3;
-            
-    //x1, y1, z1 = 0., 1., heights[int(triangle[0] / self.size[1])][triangle[0] % self.size[1]]
-    //x2, y2, z2 = 0., 0., heights[int(triangle[1] / self.size[1])][triangle[1] % self.size[1]]
-    //x3, y3, z3 = 1., 0., heights[int(triangle[2] / self.size[1])][triangle[2] % self.size[1]]
+    heights = texture2D(u_height, position).rgb;
+
+    float z1 = heights.x;
+    float z2 = heights.y;
+    float z3 = heights.z;
 
     float A = z2 - z1;
     float B = z2 - z3;
     float C = -1;
-    //D = -(x1 * (y2*z3 - y3*z2) + x2 * (y3*z1 - y1*z3) + x3 * (y1*z2 - y2*z1))
 
     return(-normalize(vec3(A, B, C)));
 }
@@ -83,8 +64,14 @@ vec3 get_normal(vec2 position) {
 void main (void) {
     v_mat = get_matrix();
 
-    vec3 normal = get_normal(a_position.xy);
-    float height = texture2D(u_height, a_position.xy).rgb.x;
+    vec2 texture_position = vec2((a_position.x + 1) * 0.5, (a_position.y + 1) * 0.5);
+    vec3 normal = get_normal(texture_position);
+    float height;
+    if (a_dot == 1) {
+        height = texture2D(u_height, texture_position).rgb.x;
+    } else if (a_dot == 2) {
+        height = texture2D(u_height, texture_position).rgb.y;
+    }
     v_normal = normalize(normal);
     vec3 mat_normal = v_mat * v_normal;
     v_bed_depth = a_bed_depth;
@@ -95,14 +82,6 @@ void main (void) {
     eye_position = normalize(vec3(a_position.xy, u_eye_height));
 
     float z = (1 - (1 + height)/(1 + u_eye_height));
-
-    
-    //////
-                            
-    v_h = texture2D(u_height, vec2(15, 15)).rgb;
-                  
-    /////
-
 
     gl_Position = vec4(mat_position.xy/2, mat_position.z * z, z);    
 }
@@ -137,6 +116,8 @@ varying vec3 eye_position;
 varying mat3 v_mat;
 
 void main() {
+     //gl_FragColor.rgb = clamp(v_normal, 0.0, 1.0);
+     //return;
     //////////////// sky color
     vec3 position = v_mat * v_position;
     
