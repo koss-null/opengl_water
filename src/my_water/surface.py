@@ -167,13 +167,16 @@ class NaturalWaves():
 
     # turns -1;1 coords into 0;1
     def get_heights_in_norm_coords(self):
-        z_norm = np.array(self.heights, dtype=np.float32)
+        z_norm = [[]] * len(self.heights)
         i = 0
         for z in self.heights:
-            zz = 1 - (1 + z) * 0.5
-            z_norm[i] = zz
+            zz = (1 - (1 + z) * 0.5) * 100
+            rgb = []
+            for item in zz:
+                rgb.append([int(item), 100, 100])
+            z_norm[i] = np.array(rgb, dtype=np.uint8)
             i += 1
-        return z_norm
+        return np.array(z_norm, dtype=np.uint8)
 
     def wireframe(self):
         final_lines = []
@@ -242,9 +245,10 @@ class NaturalWaves():
             C = x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2)
             D = -(x1 * (y2*z3 - y3*z2) + x2 * (y3*z1 - y1*z3) + x3 * (y1*z2 - y2*z1))
 
-            grad[triangle[0]] = self._vec_norm([A, B, C])
-            grad[triangle[1]] = self._vec_norm([A, B, C])
-            grad[triangle[2]] = self._vec_norm([A, B, C])
+            nrml = np.array([int(A * 10000), int(B * 10000), int(C * 10)], dtype=np.int16)
+            grad[triangle[0]] = nrml
+            grad[triangle[1]] = nrml
+            grad[triangle[2]] = nrml
 
             type = (type + 1) % 2    # changing type into next one
 

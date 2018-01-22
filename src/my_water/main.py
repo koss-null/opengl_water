@@ -5,6 +5,8 @@ from surface import *
 from shaders import *
 import time
 
+import matplotlib.pyplot as plt
+
 def normalize(vec):
     vec = np.asarray(vec, dtype=np.float32)
     return vec / np.sqrt(np.sum(vec * vec, axis=-1))[..., None]
@@ -22,7 +24,10 @@ class Canvas(app.Canvas):
         gloo.set_state(clear_color=(0, 0, 0, 1), depth_test=True, blend=True)
         self.program = gloo.Program(VS, FS_triangle)
         self.program["a_position"] = surface.position()
-        self.program["a_height"] = surface.get_heights_in_norm_coords()
+        self.program["u_surf_size"] = self.size
+        height_texture = surface.get_heights_in_norm_coords()
+        self.program["u_height"] = gloo.Texture2D(height_texture, wrapping='repeat',
+                                                  interpolation='linear')
 
         sun = np.array([0., 0.5, 1], dtype=np.float32)
         self.sun = sun / np.linalg.norm(sun)
@@ -32,11 +37,9 @@ class Canvas(app.Canvas):
         self.program["u_ambient_color"] = np.array(ambient, dtype=np.float32)
 
         self.sky = io.read_png(sky)
-        self.program['u_sky_texture'] = gloo.Texture2D(self.sky, wrapping='repeat', interpolation='linear')
+        self.program['u_sky_texture'] = gloo.Texture2D(self.sky, wrapping='mirrored_repeat', interpolation='linear')
         self.bed = io.read_png(bed)
         self.program['u_bed_texture'] = gloo.Texture2D(self.bed, wrapping='repeat', interpolation='linear')
-        self.shademap = io.read_png(shademap_name)
-        self.program['u_shademap_texture'] = gloo.Texture2D(self.shademap, interpolation='linear')
 
         self.eye_height = 4.5
         self.eye_position = np.array([0., 0.])
@@ -47,7 +50,7 @@ class Canvas(app.Canvas):
         self.program["a_bed_depth"] = surface.get_bed_depth()
 
         self.angle_x, self.angle_y, self.angle_z = 0, 0, 0
-        self.program["angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
+        self.program["u_angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
 
         self.show_bed = 0
         self.program["u_show_bed"] = self.show_bed
@@ -57,7 +60,8 @@ class Canvas(app.Canvas):
         self.program["test"] = 0.
 
         self.triangles = gloo.IndexBuffer(surface.triangulation())
-        self.normal = surface.normal()
+        # self.normal = surface.normal()
+        # self.program["u_normal"] = gloo.Texture2D(self.normal, interpolation='linear')
 
         self.camera = np.array([0, 0, 1])
         self.up = np.array([0, 1, 0])
@@ -75,9 +79,10 @@ class Canvas(app.Canvas):
     def on_draw(self, event):
         gloo.clear()
         surface.next_wave_mutation()
-        self.program["a_height"] = surface.get_heights_in_norm_coords()
-        self.normal = surface.normal()
-        self.program["a_normal"] = self.normal
+        height_texture = surface.get_heights_in_norm_coords()
+        self.program["u_height"] = gloo.Texture2D(height_texture,  wrapping='repeat', interpolation='linear')
+        # plt.imshow(surface.get_heights_in_norm_coords()) #Needs to be in row,col orders
+        # plt.savefig('figure1.png')
 
         self.program.draw('triangles', self.triangles)
 
@@ -101,27 +106,27 @@ class Canvas(app.Canvas):
             self.program["u_eye_height"] = self.eye_height
         elif event.key == 'w':
             self.angle_x += 0.1
-            self.program["angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
+            self.program["u_angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
         elif event.key == 's':
             self.angle_x -= 0.1
-            self.program["angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
+            self.program["u_angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
         elif event.key == 'a':
             self.angle_y -= 0.1
-            self.program["angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
+            self.program["u_angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
         elif event.key == 'd':
             self.angle_y += 0.1
-            self.program["angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
+            self.program["u_angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
         elif event.key == 'z':
             self.angle_z += 0.1
-            self.program["angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
+            self.program["u_angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
         elif event.key == 'x':
             self.angle_z -= 0.1
-            self.program["angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
+            self.program["u_angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
         elif event.key == '0':
             self.eye_height = 3
             self.program["u_eye_height"] = self.eye_height
             self.angle_x, self.angle_y, self.angle_z = 0., 0., 0.
-            self.program["angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
+            self.program["u_angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
         elif event.key == 'b':
             self.show_bed = (self.show_bed + 1) % 2
             self.program["u_show_bed"] = self.show_bed
@@ -154,7 +159,7 @@ class Canvas(app.Canvas):
 
 
 if __name__ == '__main__':
-    surface = NaturalWaves(size=(50, 50), max_height=0.9)
+    surface = NaturalWaves(size=(20, 20), max_height=0.9)
     # surface = RungeWaves(size=(30, 30), max_height=0.9)
     # surface = GeomethricFigure(size=(50, 50), max_height=1)
     surface.generate_random_waves(intensity=10)

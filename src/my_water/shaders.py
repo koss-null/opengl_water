@@ -1,32 +1,33 @@
 VS = ("""
 #version 120
 
-uniform float u_eye_height;
-uniform vec2  u_eye_position;
-
-uniform vec3 angle;
-
 uniform float test;
 
+uniform float     u_eye_height;
+uniform vec2      u_eye_position;
+uniform vec3      u_angle;
+uniform vec2      u_surf_size;
+uniform sampler2D u_height;
+
 attribute vec2  a_position;
-attribute float a_height;
-attribute vec3  a_normal;
 attribute float a_bed_depth;
 
 varying float v_bed_depth;
-varying vec3 v_normal;
-varying vec3 v_position;
-varying vec3 eye_position;
-varying mat3 mat;
+varying vec3  v_normal;
+varying vec3  v_position;
+varying vec3  eye_position;
+varying mat3  v_mat;
+
+varying vec3 v_h;
 
 mat3 get_matrix() {
     mat3 mat;
-    float A = cos(angle.x);
-    float B = sin(angle.x);
-    float C = cos(angle.y);
-    float D = sin(angle.y);
-    float E = cos(angle.z);
-    float F = sin(angle.z);
+    float A = cos(u_angle.x);
+    float B = sin(u_angle.x);
+    float C = cos(u_angle.y);
+    float D = sin(u_angle.y);
+    float E = cos(u_angle.z);
+    float F = sin(u_angle.z);
 
     float AD =   A * D;
     float BD =   B * D;
@@ -44,19 +45,64 @@ mat3 get_matrix() {
     return mat;
 }
 
-void main (void) {
-    mat = get_matrix();
+vec3 get_normal(vec2 position) {
+    float h1, h2, h3;
+    float dev = 100;
+    
+    int is_first = int(floor(position.x * u_surf_size.x));
+    float step =  2/u_surf_size.x;
+    
+    if (mod(is_first, 2.0) < 0.5) { //is_first % 2 == 0
+        h1 = texture2D(u_height, vec2(position.x, position.y)).rgb.x;
+        h2 = texture2D(u_height, vec2(position.x + step, position.y)).rgb.x;
+        h3 = texture2D(u_height, vec2(position.x, position.y + step)).rgb.x;
+    } else {
+        h1 = texture2D(u_height, vec2(position.x - step, position.y)).rgb.x;
+        h2 = texture2D(u_height, vec2(position.x, position.y)).rgb.x;
+        h3 = texture2D(u_height, vec2(position.x, position.y + step)).rgb.x;
+    }
+    
+    h1 /= dev; h2 /= dev; h3 /= dev;
+    
+    float z1 = h1;
+    float z2 = h2;
+    float z3 = h3;
+            
+    //x1, y1, z1 = 0., 1., heights[int(triangle[0] / self.size[1])][triangle[0] % self.size[1]]
+    //x2, y2, z2 = 0., 0., heights[int(triangle[1] / self.size[1])][triangle[1] % self.size[1]]
+    //x3, y3, z3 = 1., 0., heights[int(triangle[2] / self.size[1])][triangle[2] % self.size[1]]
 
-    v_normal = normalize(a_normal);
-    vec3 mat_normal = mat * v_normal;
+    float A = z2 - z1;
+    float B = z2 - z3;
+    float C = -1;
+    //D = -(x1 * (y2*z3 - y3*z2) + x2 * (y3*z1 - y1*z3) + x3 * (y1*z2 - y2*z1))
+
+    return(-normalize(vec3(A, B, C)));
+}
+
+void main (void) {
+    v_mat = get_matrix();
+
+    vec3 normal = get_normal(a_position.xy);
+    float height = texture2D(u_height, a_position.xy).rgb.x;
+    v_normal = normalize(normal);
+    vec3 mat_normal = v_mat * v_normal;
     v_bed_depth = a_bed_depth;
-                                
-    v_position = vec3(a_position.xy, a_height);
-    vec3 mat_position = mat * v_position;
-    vec3 eye = mat * vec3(u_eye_position.xy, u_eye_height);
+    
+    v_position = vec3(a_position.xy, height);                                
+    vec3 mat_position = v_mat * v_position;
+    vec3 eye = v_mat * vec3(u_eye_position.xy, u_eye_height);
     eye_position = normalize(vec3(a_position.xy, u_eye_height));
 
-    float z = (1-(1+a_height)/(1+u_eye_height));
+    float z = (1 - (1 + height)/(1 + u_eye_height));
+
+    
+    //////
+                            
+    v_h = texture2D(u_height, vec2(15, 15)).rgb;
+                  
+    /////
+
 
     gl_Position = vec4(mat_position.xy/2, mat_position.z * z, z);    
 }
@@ -67,14 +113,13 @@ FS_triangle = ("""
 
 uniform sampler2D u_sky_texture;
 uniform sampler2D u_bed_texture;
-uniform sampler2D u_shademap_texture;
 
 uniform float test;
 
 uniform vec3 u_sun_direction;
 uniform vec3 u_sun_color;
 uniform vec3 u_ambient_color;
-uniform vec3 angle;
+uniform vec3 u_angle;
 
 uniform float u_alpha;
 uniform vec2  u_eye_position;
@@ -86,24 +131,25 @@ uniform int u_show_sky;
 varying float v_bed_depth;
 
 varying vec3 v_normal;
+varying vec3 v_h;
 varying vec3 v_position;
 varying vec3 eye_position;
-varying mat3 mat;
+varying mat3 v_mat;
 
-void main() {      
+void main() {
     //////////////// sky color
-    vec3 position = mat * v_position;
+    vec3 position = v_mat * v_position;
     
-    vec3 eye = mat * vec3(u_eye_position.xy, u_eye_height);
+    vec3 eye = v_mat * vec3(u_eye_position.xy, u_eye_height);
     vec3 from_eye = normalize(v_position - eye);
-    vec3 normal = mat * v_normal;
+    vec3 normal = v_mat * v_normal;
     
     vec3 reflected = normalize(from_eye - 2 * v_normal * dot(v_normal, from_eye));
     vec2 sky_texcoord = 0.5 * reflected.xy/reflected.z + vec2(0.5,0.5);
     
     vec3 sky_color = texture2D(u_sky_texture, sky_texcoord).rgb; //vec3(0.5, 0.3, 0.6);
 
-    from_eye = from_eye * mat;
+    from_eye = from_eye * v_mat;
 
     /////////////// bed color
 
@@ -114,7 +160,7 @@ void main() {
 
     float c1 = -dot(normal, from_eye);
     float t = (-v_bed_depth-position.z)/refracted.z;
-    vec3 point_on_bed = mat * (position + t * refracted);
+    vec3 point_on_bed = v_mat * (position + t * refracted);
     vec2 bed_texcoord = point_on_bed.xy + vec2(0.5,0.5);
 
     float diw = length(point_on_bed - position);
