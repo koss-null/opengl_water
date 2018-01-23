@@ -165,6 +165,6 @@ if __name__ == '__main__':
     surface = NaturalWaves(size=(25, 25), max_height=0.9)
     # surface = RungeWaves(size=(30, 30), max_height=0.9)
     # surface = GeomethricFigure(size=(50, 50), max_height=1)
-    surface.generate_random_waves(intensity=100)
+    surface.generate_random_waves(intensity=0)
     c = Canvas(surface)
     app.run()

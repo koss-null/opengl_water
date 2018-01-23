@@ -323,10 +323,7 @@ class NaturalWaves():
 
         for i in range(0, self.size[0]):
             for j in range(0, self.size[1]):
-                if (j / 5) % 2 == 0 and (i / 5) % 2 == 0:
-                    z[i][j] = -0.9
-                else:
-                    z[i][j] = 0.9
+                z[i][j] = j / self.size[1]
 
         # getting GLSL coords
         z_norm = [[None]] * len(z)

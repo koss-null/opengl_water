@@ -20,6 +20,7 @@ varying float v_bed_depth;
 varying vec3  v_position;
 varying vec3  eye_position;
 varying mat3  v_mat;
+varying vec2  v_bed_texcoord;
 
 mat3 get_matrix() {
     mat3 mat;
@@ -47,6 +48,23 @@ mat3 get_matrix() {
 }
 
 vec3 get_normal(vec2 position) {
+    vec3 heights;
+    float dev = 100;
+    
+    heights = texture2D(u_bed_depth, position).rgb;
+
+    float z1 = heights.x;
+    float z2 = heights.y;
+    float z3 = heights.z;
+
+    float A = z2 - z1;
+    float B = z2 - z3;
+    float C = -1;
+
+    return(-normalize(vec3(A, B, C)));
+}
+
+vec3 get_normal_bed(vec2 position) {
     vec3 heights;
     float dev = 100;
     
@@ -89,7 +107,31 @@ void main (void) {
 
     float z = (1 - (1 + height)/(1 + u_eye_height));
 
-    gl_Position = vec4(mat_position.xy/2, mat_position.z * z, z);   
+    gl_Position = vec4(mat_position.xy/2, mat_position.z * z, z); 
+    
+    ///
+    ///1 - refracted vec
+    float nu = 1.33; //for water
+    float cos_tetta_i = dot(eye, vec3(0, 0, -1)) / length(eye);
+    float tetta_i = acos(cos_tetta_i);
+    float sin_tetta_r = nu * sin(tetta_i);
+    float tetta_r = asin(sin_tetta_r);
+    
+    vec3 T = (nu * cos_tetta_i - cos(tetta_r)) * normal - nu * vec3(u_eye_position, u_eye_height);
+    ///2 - first point on bed
+    float x = v_bed_depth / T.z;
+    vec3 P = vec3(T.x * x + texture_position.x, T.y * x + texture_position.y, 0);
+    ///3 - real point on bed
+    vec3 bed_normal = get_normal_bed(P.xy);
+    vec3 M = vec3(P.xy, texture2D(u_bed_depth, P.xy).rgb.x);
+    /// M.x(x - bed_normal.x) + M.y(y - bed_normal.y) + M.z(z - bed_normal.z) = 0
+    ///3.1 - intersection with the plane
+    vec3 bn = bed_normal;
+    float i_cf = (bn.x*M.x + bn.y*M.y + bn.z*M.z - M.x*P.x - M.y*P.y) / (T.x*M.x + T.y*M.y + T.z*M.z);
+    
+    vec2 crd = (P + (T*i_cf)).xy;
+    v_bed_texcoord = crd;
+    ///  
 }
 """)
 
@@ -98,7 +140,6 @@ FS_triangle = ("""
 
 uniform sampler2D u_sky_texture;
 uniform sampler2D u_bed_texture;
-uniform sampler2D u_bed_depth;
 
 uniform float test;
 
@@ -122,23 +163,7 @@ varying vec3  v_h;
 varying vec3  v_position;
 varying vec3  eye_position;
 varying mat3  v_mat;
-
-vec3 get_normal(vec2 position) {
-    vec3 heights;
-    float dev = 100;
-    
-    heights = texture2D(u_bed_depth, position).rgb;
-
-    float z1 = heights.x;
-    float z2 = heights.y;
-    float z3 = heights.z;
-
-    float A = z2 - z1;
-    float B = z2 - z3;
-    float C = -1;
-
-    return(-normalize(vec3(A, B, C)));
-}
+varying vec2  v_bed_texcoord;
 
 void main() {
      //gl_FragColor.rgb = clamp(v_normal, 0.0, 1.0);
@@ -172,40 +197,13 @@ void main() {
     float t = (-bed_depth - position.z)/refracted.z;
     vec3 point_on_bed = v_mat * (texture_position + t * refracted);
     
-    ///
-    ///1 - refracted vec
-    float nu = 1.33; //for water
-    float cos_tetta_i = dot(eye, vec3(0, 0, 1)) / length(eye);
-    float tetta_i = acos(cos_tetta_i);
-    float sin_tetta_r = nu * sin(tetta_i);
-    float tetta_r = asin(sin_tetta_r);
-    
-    vec3 T = (nu * cos_tetta_i - cos(tetta_r)) * normal - nu * u_sun_direction;
-    ///2 - first point on bed
-    float x = v_height / T.z;
-    vec3 P = vec3(T.x * x + v_position.x, T.y * x + v_position.y, 0);
-    ///3 - real point on bed
-    vec3 bed_normal = get_normal(P.xy);
-    vec3 M = vec3(P.xy, texture2D(u_bed_depth, P.xy).rgb.x);
-    /// M.x(x - bed_normal.x) + M.y(y - bed_normal.y) + M.z(z - bed_normal.z) = 0
-    ///3.1 - intersection with the plane
-    vec3 bn = bed_normal;
-    float i_cf = (bn.x*M.x + bn.y*M.y + bn.z*M.z - M.x*P.x - M.y*P.y) / (T.x*M.x + T.y*M.y + T.z*M.z);
-    
-    vec2 crd = (T*i_cf).xy;
-    vec2 bed_texcoord = (crd + vec2(1, 1)) * 0.5;
-    ///
-    
-    //vec2 bed_texcoord = point_on_bed.xy + vec2(0.5,0.5);
-
     float diw = length(point_on_bed - position);
     vec3 filter = vec3(1, 0.5, 0.3);
     vec3 v_mask = vec3(exp(-diw * filter.x), exp(-diw * filter.y), exp(-diw * filter.z));
 
-    vec3 bed_color = texture2D(u_bed_texture, bed_texcoord).rgb * v_mask; //vec3(0.1, 0.3, 0.7);
+    vec3 bed_color = texture2D(u_bed_texture, v_bed_texcoord).rgb * v_mask; //vec3(0.1, 0.3, 0.7);
 
-    float cos_phi = dot(reflected, from_eye) /
-                        length(reflected) /
+    float cos_phi = dot(vec3(0,0,1), from_eye) /
                         length(from_eye);
     
     //////////////////
@@ -218,7 +216,7 @@ void main() {
     float reflectance_p = pow((u_alpha*c2-c1)/(u_alpha*c2+c1), 3);
     float reflectance = (reflectance_s + reflectance_p) / 2;
     
-    float reflected_intensity = pow(cos_phi, 1) ;
+    float reflected_intensity = pow(cos_phi, 2) ;
     
     float sky_coef = 0.6;
     float bed_coef = 1;
