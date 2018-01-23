@@ -10,9 +10,9 @@ uniform vec2      u_surf_size;
 uniform sampler2D u_height;
 
 attribute vec2  a_position;
-attribute float a_bed_depth;
 attribute float a_dot;
 
+varying float v_dot;
 varying float v_bed_depth;
 varying vec3  v_normal;
 varying vec3  v_position;
@@ -63,10 +63,12 @@ vec3 get_normal(vec2 position) {
 
 void main (void) {
     v_mat = get_matrix();
+    v_dot = a_dot;
 
     vec2 texture_position = vec2((a_position.x + 1) * 0.5, (a_position.y + 1) * 0.5);
     vec3 normal = get_normal(texture_position);
     float height;
+    
     if (a_dot == 1) {
         height = texture2D(u_height, texture_position).rgb.x;
     } else if (a_dot == 2) {
@@ -74,7 +76,6 @@ void main (void) {
     }
     v_normal = normalize(normal);
     vec3 mat_normal = v_mat * v_normal;
-    v_bed_depth = a_bed_depth;
     
     v_position = vec3(a_position.xy, height);                                
     vec3 mat_position = v_mat * v_position;
@@ -83,7 +84,7 @@ void main (void) {
 
     float z = (1 - (1 + height)/(1 + u_eye_height));
 
-    gl_Position = vec4(mat_position.xy/2, mat_position.z * z, z);    
+    gl_Position = vec4(mat_position.xy/2, mat_position.z * z, z);   
 }
 """)
 
@@ -92,6 +93,7 @@ FS_triangle = ("""
 
 uniform sampler2D u_sky_texture;
 uniform sampler2D u_bed_texture;
+uniform sampler2D u_bed_depth;
 
 uniform float test;
 
@@ -107,13 +109,29 @@ uniform float u_eye_height;
 uniform int u_show_bed;
 uniform int u_show_sky;
 
-varying float v_bed_depth;
+varying float v_dot;
+varying vec3  v_normal;
+varying vec3  v_h;
+varying vec3  v_position;
+varying vec3  eye_position;
+varying mat3  v_mat;
 
-varying vec3 v_normal;
-varying vec3 v_h;
-varying vec3 v_position;
-varying vec3 eye_position;
-varying mat3 v_mat;
+vec3 get_normal(vec2 position) {
+    vec3 heights;
+    float dev = 100;
+    
+    heights = texture2D(u_bed_depth, position).rgb;
+
+    float z1 = heights.x;
+    float z2 = heights.y;
+    float z3 = heights.z;
+
+    float A = z2 - z1;
+    float B = z2 - z3;
+    float C = -1;
+
+    return(-normalize(vec3(A, B, C)));
+}
 
 void main() {
      //gl_FragColor.rgb = clamp(v_normal, 0.0, 1.0);
@@ -134,14 +152,25 @@ void main() {
 
     /////////////// bed color
 
+    vec3 texture_position = vec3((v_position.x), (v_position.y), v_position.z);
+    
+    float bed_depth;
+    if (v_dot == 1) {
+        bed_depth = texture2D(u_bed_depth, vec2((v_position.x + 1)*0.5, (v_position.y + 1)*0.5)).rgb.x;
+    } else if (v_dot == 2) {
+        bed_depth = texture2D(u_bed_depth, vec2((v_position.x + 1)*0.5, (v_position.y + 1)*0.5)).rgb.y;
+    }
+    
+    bed_depth = bed_depth / 100;
+    
     vec3 cr = cross(normal, from_eye);
     float d = 1 - u_alpha*u_alpha*dot(cr,cr);
     float c2 = sqrt(d);
     vec3 refracted = normalize(u_alpha*cross(cr, normal) - normal*c2);
 
     float c1 = -dot(normal, from_eye);
-    float t = (-v_bed_depth-position.z)/refracted.z;
-    vec3 point_on_bed = v_mat * (position + t * refracted);
+    float t = (-bed_depth - position.z)/refracted.z;
+    vec3 point_on_bed = v_mat * (texture_position + t * refracted);
     vec2 bed_texcoord = point_on_bed.xy + vec2(0.5,0.5);
 
     float diw = length(point_on_bed - position);

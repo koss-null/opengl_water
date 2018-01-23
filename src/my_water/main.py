@@ -25,9 +25,19 @@ class Canvas(app.Canvas):
         self.program = gloo.Program(VS, FS_triangle)
         self.program["a_position"] = surface.position()
         self.program["u_surf_size"] = self.size
+
         height_texture = surface.get_heights_in_norm_coords()
-        self.program["u_height"] = gloo.Texture2D(height_texture, wrapping='repeat',
-                                                  interpolation='linear')
+        depth_texture = surface.get_bed_depth()
+        self.program["u_height"] = gloo.Texture2D(depth_texture, wrapping='repeat', interpolation='linear')
+
+        self.program["u_bed_depth"] = gloo.Texture2D(depth_texture, wrapping='repeat', interpolation='linear')
+
+        i, j = 0, 0
+        for item in height_texture:
+            for it in item:
+                print(it)
+                print(depth_texture[i][j])
+
         self.program["a_dot"] = surface.dot_types
 
         sun = np.array([0., 0.5, 1], dtype=np.float32)
@@ -47,8 +57,6 @@ class Canvas(app.Canvas):
         self.program["u_eye_height"] = self.eye_height
         self.program["u_eye_position"] = self.eye_position
         self.program["u_alpha"] = 0.4
-
-        self.program["a_bed_depth"] = surface.get_bed_depth()
 
         self.angle_x, self.angle_y, self.angle_z = 0, 0, 0
         self.program["u_angle"] = np.array([self.angle_x, self.angle_y, self.angle_z])
@@ -160,9 +168,9 @@ class Canvas(app.Canvas):
 
 
 if __name__ == '__main__':
-    surface = NaturalWaves(size=(20, 20), max_height=0.9)
+    surface = NaturalWaves(size=(25, 25), max_height=0.9)
     # surface = RungeWaves(size=(30, 30), max_height=0.9)
     # surface = GeomethricFigure(size=(50, 50), max_height=1)
-    surface.generate_random_waves(intensity=0)
+    surface.generate_random_waves(intensity=100)
     c = Canvas(surface)
     app.run()

@@ -323,7 +323,7 @@ class NaturalWaves():
 
         for y in range(0, self.size[0]):
             for x in range(0, self.size[1]):
-                z[x][y] = min((x - self.size[1]/2) ** 2, 15)
+                z[x][y] = min((x - self.size[1]/2) ** 2, 25)
 
         #normalization
         max_val = -10000.
@@ -337,13 +337,21 @@ class NaturalWaves():
                 z[i][j] /= abs(max_val)
 
         # getting GLSL coords
-        z_norm = z
+        z_norm = [[None]] * len(z)
         i = 0
-        for j in z:
-            zz = 1 - (1 + j) * 0.5
-            z_norm[i] = zz
+        for o in z:
+            zz = 100 - (1 - (1 + o) * 0.5 * 100)
+            rgb = []
+            j = 0
+            for item in zz:
+                if j % 2 == 0:
+                    rgb.append(np.array([int(item), int(zz[min(j + 1, len(zz)-1)]), int(z[min(i + 1, len(z)-1)][j])], dtype=np.uint8))
+                else:
+                    rgb.append(np.array([int(zz[max(j - 1, 0)]), int(item), int(z[min(i + 1, len(z)-1)][max(j-1, 0)])], dtype=np.uint8))
+                j += 1
+            z_norm[i] = np.array(rgb, dtype=np.uint8)
             i += 1
-        return z_norm
+        return np.array(z_norm, dtype=np.uint8)
 
 
 class RungeWaves():
