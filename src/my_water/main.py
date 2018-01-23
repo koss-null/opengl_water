@@ -27,9 +27,9 @@ class Canvas(app.Canvas):
         self.program["u_surf_size"] = self.size
 
         height_texture = surface.get_heights_in_norm_coords()
-        depth_texture = surface.get_bed_depth()
-        self.program["u_height"] = gloo.Texture2D(depth_texture, wrapping='repeat', interpolation='linear')
+        self.program["u_height"] = gloo.Texture2D(height_texture, wrapping='repeat', interpolation='linear')
 
+        depth_texture = surface.get_bed_depth()
         self.program["u_bed_depth"] = gloo.Texture2D(depth_texture, wrapping='repeat', interpolation='linear')
 
         i, j = 0, 0

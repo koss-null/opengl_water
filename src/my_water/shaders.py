@@ -8,13 +8,14 @@ uniform vec2      u_eye_position;
 uniform vec3      u_angle;
 uniform vec2      u_surf_size;
 uniform sampler2D u_height;
+uniform sampler2D u_bed_depth;
 
 attribute vec2  a_position;
 attribute float a_dot;
 
 varying float v_dot;
-varying float v_bed_depth;
 varying vec3  v_normal;
+varying float v_bed_depth;
 varying vec3  v_position;
 varying vec3  eye_position;
 varying mat3  v_mat;
@@ -71,8 +72,10 @@ void main (void) {
     
     if (a_dot == 1) {
         height = texture2D(u_height, texture_position).rgb.x;
+        v_bed_depth = texture2D(u_bed_depth, texture_position).rgb.x;
     } else if (a_dot == 2) {
         height = texture2D(u_height, texture_position).rgb.y;
+        v_bed_depth = texture2D(u_bed_depth, texture_position).rgb.y;
     }
     v_normal = normalize(normal);
     vec3 mat_normal = v_mat * v_normal;
@@ -111,6 +114,7 @@ uniform int u_show_sky;
 
 varying float v_dot;
 varying vec3  v_normal;
+varying float v_bed_depth;
 varying vec3  v_h;
 varying vec3  v_position;
 varying vec3  eye_position;
@@ -154,14 +158,7 @@ void main() {
 
     vec3 texture_position = vec3((v_position.x), (v_position.y), v_position.z);
     
-    float bed_depth;
-    if (v_dot == 1) {
-        bed_depth = texture2D(u_bed_depth, vec2((v_position.x + 1)*0.5, (v_position.y + 1)*0.5)).rgb.x;
-    } else if (v_dot == 2) {
-        bed_depth = texture2D(u_bed_depth, vec2((v_position.x + 1)*0.5, (v_position.y + 1)*0.5)).rgb.y;
-    }
-    
-    bed_depth = bed_depth / 100;
+    float bed_depth = v_bed_depth;
     
     vec3 cr = cross(normal, from_eye);
     float d = 1 - u_alpha*u_alpha*dot(cr,cr);

@@ -321,20 +321,12 @@ class NaturalWaves():
     def get_bed_depth(self):
         z = np.zeros(self.size, dtype=np.float32)
 
-        for y in range(0, self.size[0]):
-            for x in range(0, self.size[1]):
-                z[x][y] = min((x - self.size[1]/2) ** 2, 25)
-
-        #normalization
-        max_val = -10000.
-        for i in range(0, len(z)):
-            for j in range(0, len(z[i])):
-                if z[i][j] > max_val:
-                    max_val = z[i][j]
-
-        for i in range(0, len(z)):
-            for j in range(0, len(z[i])):
-                z[i][j] /= abs(max_val)
+        for i in range(0, self.size[0]):
+            for j in range(0, self.size[1]):
+                if (j / 5) % 2 == 0 and (i / 5) % 2 == 0:
+                    z[i][j] = -0.9
+                else:
+                    z[i][j] = 0.9
 
         # getting GLSL coords
         z_norm = [[None]] * len(z)
