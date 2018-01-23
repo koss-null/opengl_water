@@ -32,12 +32,6 @@ class Canvas(app.Canvas):
         depth_texture = surface.get_bed_depth()
         self.program["u_bed_depth"] = gloo.Texture2D(depth_texture, wrapping='repeat', interpolation='linear')
 
-        i, j = 0, 0
-        for item in height_texture:
-            for it in item:
-                print(it)
-                print(depth_texture[i][j])
-
         self.program["a_dot"] = surface.dot_types
 
         sun = np.array([0., 0.5, 1], dtype=np.float32)

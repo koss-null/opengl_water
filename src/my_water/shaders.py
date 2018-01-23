@@ -14,6 +14,7 @@ attribute vec2  a_position;
 attribute float a_dot;
 
 varying float v_dot;
+varying float v_height;
 varying vec3  v_normal;
 varying float v_bed_depth;
 varying vec3  v_position;
@@ -78,6 +79,7 @@ void main (void) {
         v_bed_depth = texture2D(u_bed_depth, texture_position).rgb.y;
     }
     v_normal = normalize(normal);
+    v_height = height;
     vec3 mat_normal = v_mat * v_normal;
     
     v_position = vec3(a_position.xy, height);                                
@@ -113,6 +115,7 @@ uniform int u_show_bed;
 uniform int u_show_sky;
 
 varying float v_dot;
+varying float v_height;
 varying vec3  v_normal;
 varying float v_bed_depth;
 varying vec3  v_h;
@@ -168,7 +171,32 @@ void main() {
     float c1 = -dot(normal, from_eye);
     float t = (-bed_depth - position.z)/refracted.z;
     vec3 point_on_bed = v_mat * (texture_position + t * refracted);
-    vec2 bed_texcoord = point_on_bed.xy + vec2(0.5,0.5);
+    
+    ///
+    ///1 - refracted vec
+    float nu = 1.33; //for water
+    float cos_tetta_i = dot(eye, vec3(0, 0, 1)) / length(eye);
+    float tetta_i = acos(cos_tetta_i);
+    float sin_tetta_r = nu * sin(tetta_i);
+    float tetta_r = asin(sin_tetta_r);
+    
+    vec3 T = (nu * cos_tetta_i - cos(tetta_r)) * normal - nu * u_sun_direction;
+    ///2 - first point on bed
+    float x = v_height / T.z;
+    vec3 P = vec3(T.x * x + v_position.x, T.y * x + v_position.y, 0);
+    ///3 - real point on bed
+    vec3 bed_normal = get_normal(P.xy);
+    vec3 M = vec3(P.xy, texture2D(u_bed_depth, P.xy).rgb.x);
+    /// M.x(x - bed_normal.x) + M.y(y - bed_normal.y) + M.z(z - bed_normal.z) = 0
+    ///3.1 - intersection with the plane
+    vec3 bn = bed_normal;
+    float i_cf = (bn.x*M.x + bn.y*M.y + bn.z*M.z - M.x*P.x - M.y*P.y) / (T.x*M.x + T.y*M.y + T.z*M.z);
+    
+    vec2 crd = (T*i_cf).xy;
+    vec2 bed_texcoord = (crd + vec2(1, 1)) * 0.5;
+    ///
+    
+    //vec2 bed_texcoord = point_on_bed.xy + vec2(0.5,0.5);
 
     float diw = length(point_on_bed - position);
     vec3 filter = vec3(1, 0.5, 0.3);
