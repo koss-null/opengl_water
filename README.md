@@ -12,5 +12,7 @@ As the result there is a water surface model with some features:
 - there are some good refractions on the moving water 
 
 To run the program it's possible to use just
+
   cd src/my_water
+  
   python3 main.py
